@@ -1,4 +1,5 @@
 #include "motis/nigiri/nigiri.h"
+#include <cista/mmap.h>
 
 #include <fstream>
 #include <utility>
@@ -423,6 +424,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
+        auto shape_dump_file_prefix = dump_file_path;
+        shape_dump_file_prefix += std::string{"-shape"};
 
         auto loaded = false;
         for (auto i = 0U; i != 2; ++i) {
@@ -436,7 +439,12 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
-            for (auto const& [src, loader, dir] : datasets) {
+            shape_vecvec_ = std::make_unique<mm_vecvec<uint32_t, ::geo::latlng>>(create_mmap(shape_dump_file_prefix.string()));
+            auto const raw = shape_vecvec_.get();
+  // std::cout << "DEBUG: RAW PTR == NULL?? " << (raw == nullptr) << "  (" << shape_vecvec_->empty() << ")" << std::endl;
+            // std::cout << "BEFORE!!!!" << std::endl;
+            for (auto const& [src, loader, dir] : datasets /* "schedules" */) {
+            // std::cout << "BETWEEN!!!!" << std::endl;
               auto progress_tracker = utl::activate_progress_tracker(
                   fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
 
@@ -486,12 +494,14 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
+              shape_vecvec_ = std::make_unique<mm_vecvec<uint32_t, ::geo::latlng>>(create_mmap(shape_dump_file_prefix.string(), cista::mmap::protection::READ));
               loaded = true;
               break;
             } catch (std::exception const& e) {
               LOG(logging::error)
                   << "cannot read cached timetable image: " << e.what();
               std::filesystem::remove(dump_file_path);
+              shape_vecvec_->clear();
               continue;
             }
           }

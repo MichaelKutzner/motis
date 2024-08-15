@@ -4,9 +4,22 @@
 #include <string>
 #include <vector>
 
+#include "geo/latlng.h"
+
+#include "cista/containers/mmap_vec.h"
+#include "cista/containers/vecvec.h"
+#include "cista/mmap.h"
+
 #include "motis/module/module.h"
 
 namespace motis::nigiri {
+
+// Duplicated from nigiri/types.h
+template <typename T>
+using mm_vec = ::cista::basic_mmap_vec<T, std::uint64_t>;
+
+template <typename Key, typename V, typename SizeType = ::cista::base_t<Key>>
+using mm_vecvec = cista::basic_vecvec<Key, mm_vec<V>, mm_vec<SizeType>>;
 
 struct nigiri : public motis::module::module {
   nigiri();
@@ -48,6 +61,16 @@ private:
   bool gtfsrt_incremental_{false};
   bool debug_{false};
   bool bikes_allowed_default_{false};
+  std::unique_ptr<mm_vecvec<uint32_t, ::geo::latlng>> shape_vecvec_{};
 };
+
+inline mm_vecvec<uint32_t, ::geo::latlng> create_mmap(std::string path, ::cista::mmap::protection const mode = ::cista::mmap::protection::WRITE) {
+  auto data_path = path + ".data";
+  auto metadata_path = path + ".metadata";
+  return {::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
+              ::cista::mmap{data_path.data(), mode}},
+          ::cista::basic_mmap_vec<cista::base_t<uint32_t>, std::uint64_t>{
+              ::cista::mmap{metadata_path.data(), mode}}};
+}
 
 }  // namespace motis::nigiri

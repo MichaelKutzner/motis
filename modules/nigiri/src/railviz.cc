@@ -3,6 +3,7 @@
 #include "boost/geometry/index/rtree.hpp"
 #include "boost/iterator/function_output_iterator.hpp"
 
+#include "geo/latlng.h"
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
