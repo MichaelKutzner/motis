@@ -47,6 +47,7 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
+  n::trip_idx_t trip_idx_{};
 };
 
 int min_zoom_level(n::clasz const clasz, float const distance) {
@@ -188,7 +189,6 @@ struct railviz::impl {
     auto const* req = motis_content(RailVizTripsRequest, msg);
 
     auto runs = std::vector<stop_pair>{};
-    auto trips = std::vector<n::trip_idx_t>{};
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
       auto const r = resolve_run(tags_, tt_, et);
@@ -203,11 +203,12 @@ struct railviz::impl {
                                     .from_ = static_cast<n::stop_idx_t>(
                                         from.stop_idx_ - fr.stop_range_.from_),
                                     .to_ = static_cast<n::stop_idx_t>(
-                                        to.stop_idx_ - fr.stop_range_.from_)});
+                                        to.stop_idx_ - fr.stop_range_.from_),
+                                    .trip_idx_ = r.trip_idx_
+                                    });
       }
-      trips.push_back(r.trip_idx);
     }
-    return create_response(runs, trips);
+    return create_response(runs);
   }
 
   mm::msg_ptr get_trains(mm::msg_ptr const& msg) {
@@ -255,7 +256,7 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  mm::msg_ptr create_response(std::vector<stop_pair> const& runs, std::vector<n::trip_idx_t> const& trips = {}) const {
+  mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
     geo::polyline_encoder<6> enc;
 
     mm::message_creator mc;
@@ -284,10 +285,6 @@ struct railviz::impl {
                     std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
-    // TODO Identify correct shape
-    auto const trip_idx = n::trip_idx_t{157};
-    auto const shapes = tt_.get_shapes(trip_idx, shape_vecvec_.get());
-    auto const& shape = shapes[0];
     auto const get_coordinate = [tt = std::cref(tt_)](auto const& idx) { return tt.get().locations_.coordinates_.at(idx); };
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
       auto const fr = n::rt::frun{tt_, rtt_.get(), r.r_};
@@ -300,6 +297,7 @@ struct railviz::impl {
 
       auto const key =
           std::pair{std::min(from_l, to_l), std::max(from_l, to_l)};
+      auto const shape = tt_.get_shape(r.trip_idx_, shape_vecvec_.get());
       auto const polyline_indices = std::vector<int64_t>{
           utl::get_or_create(
               polyline_indices_cache, key,

@@ -440,7 +440,6 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             shape_vecvec_ = std::make_unique<mm_vecvec<uint32_t, ::geo::latlng>>(create_mmap(shape_dump_file_prefix.string()));
-            auto const raw = shape_vecvec_.get();
             for (auto const& [src, loader, dir] : datasets /* "schedules" */) {
               auto progress_tracker = utl::activate_progress_tracker(
                   fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
