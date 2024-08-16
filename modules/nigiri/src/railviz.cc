@@ -282,37 +282,13 @@ struct railviz::impl {
     auto polyline_indices_cache =
         n::hash_map<std::pair<n::location_idx_t, n::location_idx_t>,
                     std::int64_t>{};
-    // std::cout << "PIC: " << polyline_indices_cache << std::endl;
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
-    // std::cout << runs.begin()->from_ << std::endl;
-    // std::cout << "Sending shape ..." << std::endl;
-    // auto even = true;
-    // auto send = [&mc, &enc, &fbs_polylines, &even](bool force=false) {
-    //   even = !even;
-    //   if (even || force) {
-    //     fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-    //     enc.reset();
-    //   }
-    // };
-    // for (auto const& trip : trips) {
-    //   auto const shapes = tt_.get_shapes(n::trip_idx_t{52}, shape_vecvec_.get());
-    //   for (auto const& shape: shapes) {
-    //     std::cout << "Adding shape (" << shape.size() << ")..." << std::endl;
-    //     for (auto const& point : shape) {
-    //       // std::cout << "Adding point ..." << std::endl;
-    //       enc.push(point);
-    //       send(true);
-    //     }
-    //   }
-    // }
-    // send(true);
-    // std::cout << "Sending shape ..." << std::endl;
-    // auto pair_counter = 0u;
+    // TODO Identify correct shape
     auto const trip_idx = n::trip_idx_t{157};
-    std::cout << "Using trip: " << trip_idx.v_ << std::endl;
     auto const shapes = tt_.get_shapes(trip_idx, shape_vecvec_.get());
     auto const& shape = shapes[0];
+    auto const get_coordinate = [tt = std::cref(tt_)](auto const& idx) { return tt.get().locations_.coordinates_.at(idx); };
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
       auto const fr = n::rt::frun{tt_, rtt_.get(), r.r_};
 
@@ -329,40 +305,22 @@ struct railviz::impl {
               polyline_indices_cache, key,
               [&] {
                 auto const [first, second] = (key.first != from_l)
-                  ? std::pair(tt_.locations_.coordinates_.at(key.first), tt_.locations_.coordinates_.at(key.second))
-                  : std::pair(tt_.locations_.coordinates_.at(key.second), tt_.locations_.coordinates_.at(key.first))
+                  ? std::pair(get_coordinate(key.first), get_coordinate(key.second))
+                  : std::pair(get_coordinate(key.second), get_coordinate(key.first))
                 ;
-                // auto const first = tt_.locations_.coordinates_.at(key.first);
-                // // std::cout << tt_.locations_.coordinates_
-                // auto const second = tt_.locations_.coordinates_.at(key.second);
-                // auto const middle = geo::latlng{
-                //   (first.lat_ + second.lat_) / 2. + .05,
-                //   (first.lng_ + second.lng_) / 2.,
-                // };
-                // enc.push(first2);
-                auto p1 = ::osr::distance_to_way(first, shape);
-                auto p2 = ::osr::distance_to_way(second, shape);
                 enc.push(first);
-                for (auto idx = p1.segment_idx_; idx <= p2.segment_idx_; ++idx) {
-                  enc.push(shape[idx]);
+                if (shape.size() > 0) {
+                  auto p1 = ::osr::distance_to_way(first, shape);
+                  auto p2 = ::osr::distance_to_way(second, shape);
+                  for (auto idx = p1.segment_idx_; idx <= p2.segment_idx_; ++idx) {
+                    enc.push(shape[idx]);
+                  }
                 }
-                // enc.push(middle);
                 enc.push(second);
-                // enc.push(tt_.locations_.coordinates_.at(key.first));
-                // enc.push(tt_.locations_.coordinates_.at(key.second));
-                // enc.push(first2);
                 fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
                 enc.reset();
                 return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
-                // return ++pair_counter;
               })};
-          //     }) *
-          // (key.first != from_l ? -1 : 1)};
-      // std::cout << "Polyline (" << polyline_indices.size() << "): ";
-      // for (auto& x : polyline_indices) {
-      //   std::cout << x << ", ";
-      // }
-      // std::cout << std::endl;
 
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),

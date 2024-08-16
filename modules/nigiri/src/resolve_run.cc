@@ -51,7 +51,6 @@ n::rt::run resolve_run(tag_lookup const& tags, n::timetable const& tt,
         continue;
       }
 
-      std::cout << "TRIP DETAILS:: " << i->first.v_ << ", " << i->second.v_ << std::endl;
       return n::rt::run{.t_ = t, .stop_range_ = stop_range, .trip_idx = i->second};
     }
   }

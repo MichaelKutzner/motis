@@ -441,10 +441,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             shape_vecvec_ = std::make_unique<mm_vecvec<uint32_t, ::geo::latlng>>(create_mmap(shape_dump_file_prefix.string()));
             auto const raw = shape_vecvec_.get();
-  // std::cout << "DEBUG: RAW PTR == NULL?? " << (raw == nullptr) << "  (" << shape_vecvec_->empty() << ")" << std::endl;
-            // std::cout << "BEFORE!!!!" << std::endl;
             for (auto const& [src, loader, dir] : datasets /* "schedules" */) {
-            // std::cout << "BETWEEN!!!!" << std::endl;
               auto progress_tracker = utl::activate_progress_tracker(
                   fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
 
