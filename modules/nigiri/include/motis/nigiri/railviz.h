@@ -7,6 +7,7 @@
 #include "nigiri/types.h"
 
 #include "motis/module/message.h"
+#include "motis/nigiri/nigiri.h"
 
 namespace nigiri {
 struct timetable;
@@ -18,7 +19,7 @@ namespace motis::nigiri {
 struct tag_lookup;
 
 struct railviz {
-  railviz(tag_lookup const&, ::nigiri::timetable const&);
+  railviz(tag_lookup const&, ::nigiri::timetable const&, std::unique_ptr<mm_vecvec<uint32_t, ::geo::latlng>>);
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;
