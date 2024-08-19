@@ -423,6 +423,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
+        auto shape_dump_file_prefix = dump_file_path;
+        shape_dump_file_prefix += std::string{"-shape"};
+        shape_ptr shape{};
 
         auto loaded = false;
         for (auto i = 0U; i != 2; ++i) {
@@ -436,6 +439,10 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
+            if (railviz_) {
+              shape = open_shape(shape_dump_file_prefix,
+                                 cista::mmap::protection::WRITE);
+            }
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
                   fmt::format("{}nigiri", impl_->tags_.get_tag(src)));
@@ -447,7 +454,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               try {
                 (*loader)->load({.link_stop_distance_ = link_stop_distance_,
                                  .default_tz_ = default_timezone_},
-                                src, *dir, **impl_->tt_, traffic_day_bitfields);
+                                src, *dir, **impl_->tt_, traffic_day_bitfields,
+                                shape.get());
                 progress_tracker->status("FINISHED").show_progress(false);
               } catch (std::exception const& e) {
                 progress_tracker->status(fmt::format("ERROR: {}", e.what()))
@@ -486,12 +494,17 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 impl_->update_rtt(std::make_shared<n::rt_timetable>(
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
+              if (railviz_) {
+                shape = open_shape(shape_dump_file_prefix,
+                                   cista::mmap::protection::READ);
+              }
               loaded = true;
               break;
             } catch (std::exception const& e) {
               LOG(logging::error)
                   << "cannot read cached timetable image: " << e.what();
               std::filesystem::remove(dump_file_path);
+              shape.reset();
               continue;
             }
           }
@@ -519,8 +532,8 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
 
         if (railviz_) {
           impl_->initial_permalink_ = get_initial_permalink(**impl_->tt_);
-          impl_->railviz_ =
-              std::make_unique<railviz>(impl_->tags_, (**impl_->tt_));
+          impl_->railviz_ = std::make_unique<railviz>(
+              impl_->tags_, (**impl_->tt_), std::move(shape));
         }
 
         add_shared_data(to_res_id(mm::global_res_id::NIGIRI_TIMETABLE),
