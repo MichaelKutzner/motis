@@ -302,7 +302,7 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto const [first, second] = (key.first != from_l)
+                auto const [first, second] = (key.first == from_l)
                   ? std::pair(get_coordinate(key.first), get_coordinate(key.second))
                   : std::pair(get_coordinate(key.second), get_coordinate(key.first))
                 ;
