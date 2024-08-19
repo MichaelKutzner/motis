@@ -257,6 +257,21 @@ struct railviz::impl {
     return create_response(runs);
   }
 
+  static inline void append_leg(auto& enc, auto const& shape, auto const& from, auto const& to) {
+    if (shape.size() > 0) {
+      auto p1 = ::osr::distance_to_way(from, shape);
+      auto p2 = ::osr::distance_to_way(to, shape);
+      if (p1.segment_idx_ < p2.segment_idx_) {
+        for (auto idx = p1.segment_idx_; idx <= p2.segment_idx_; ++idx) {
+          enc.push(shape[idx]);
+        }
+        return;
+      }
+    }
+    enc.push(from);
+    enc.push(to);
+  }
+
   mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
     geo::polyline_encoder<6> enc;
 
@@ -308,15 +323,7 @@ struct railviz::impl {
                                                   get_coordinate(key.second))
                                       : std::pair(get_coordinate(key.second),
                                                   get_coordinate(key.first));
-            enc.push(first);
-            if (shape.size() > 0) {
-              auto p1 = ::osr::distance_to_way(first, shape);
-              auto p2 = ::osr::distance_to_way(second, shape);
-              for (auto idx = p1.segment_idx_; idx <= p2.segment_idx_; ++idx) {
-                enc.push(shape[idx]);
-              }
-            }
-            enc.push(second);
+            append_leg(enc, shape, first, second);
             fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
             enc.reset();
             return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
