@@ -257,19 +257,29 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  static inline void append_leg(auto& enc, auto const& shape, auto const& from, auto const& to) {
-    if (shape.size() > 0) {
-      auto p1 = ::osr::distance_to_way(from, shape);
-      auto p2 = ::osr::distance_to_way(to, shape);
-      if (p1.segment_idx_ < p2.segment_idx_) {
-        for (auto idx = p1.segment_idx_; idx <= p2.segment_idx_; ++idx) {
-          enc.push(shape[idx]);
-        }
-        return;
-      }
+  static inline void append_leg_segment(auto& enc, auto const& shape,
+                                        auto const& start, auto const& end) {
+    for (auto idx = start; idx <= end; ++idx) {
+      enc.push(shape[idx]);
     }
-    enc.push(from);
-    enc.push(to);
+  }
+
+  static inline void append_leg(auto& enc, auto const& shape, auto const& from,
+                                auto const& to) {
+    if (shape.size() == 0) {
+      enc.push(from);
+      enc.push(to);
+      return;
+    }
+    auto p1 = ::osr::distance_to_way(from, shape);
+    auto p2 = ::osr::distance_to_way(to, shape);
+    auto const [start, end] = std::pair(p1.segment_idx_, p2.segment_idx_);
+    if (start <= end) {
+      append_leg_segment(enc, shape, start, end);
+    } else {
+      append_leg_segment(enc, shape, end, shape.size() - 1);
+      append_leg_segment(enc, shape, 0, start);
+    }
   }
 
   mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
