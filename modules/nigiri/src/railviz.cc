@@ -1,5 +1,7 @@
 #include "motis/nigiri/railviz.h"
 
+#include <ranges>
+
 #include "boost/geometry/index/rtree.hpp"
 #include "boost/iterator/function_output_iterator.hpp"
 
@@ -257,15 +259,23 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  static inline void append_leg_segment(auto& enc, auto const& shape,
-                                        auto const& start, auto const& end) {
-    for (auto idx = start; idx <= end; ++idx) {
-      enc.push(shape[idx]);
+  static inline auto get_shape_ranges(auto const& start, auto const& end,
+                                      auto const& max) {
+    if (start <= end) {
+      return std::ranges::join_view(std::vector{
+          std::ranges::iota_view(start, end + 1),
+      });
+    } else {
+      return std::ranges::join_view(std::vector{
+          std::views::iota(end, max),
+          std::views::iota(static_cast<decltype(start)>(0), start + 1),
+      });
     }
   }
 
-  static inline void append_leg(auto& enc, auto const& shape, auto const& from,
-                                auto const& to) {
+  static inline void append_shape_leg(auto& enc, auto const& shape,
+                                      auto const& from, auto const& to,
+                                      bool const forwards) {
     if (shape.size() == 0) {
       enc.push(from);
       enc.push(to);
@@ -273,12 +283,17 @@ struct railviz::impl {
     }
     auto p1 = ::osr::distance_to_way(from, shape);
     auto p2 = ::osr::distance_to_way(to, shape);
-    auto const [start, end] = std::pair(p1.segment_idx_, p2.segment_idx_);
-    if (start <= end) {
-      append_leg_segment(enc, shape, start, end);
+    if (forwards) {
+      for (auto const& index :
+           get_shape_ranges(p1.segment_idx_, p2.segment_idx_, shape.size())) {
+        enc.push(shape[index]);
+      }
     } else {
-      append_leg_segment(enc, shape, end, shape.size() - 1);
-      append_leg_segment(enc, shape, 0, start);
+      for (auto const& index :
+           get_shape_ranges(p2.segment_idx_, p1.segment_idx_, shape.size()) |
+               std::views::reverse) {
+        enc.push(shape[index]);
+      }
     }
   }
 
@@ -327,17 +342,17 @@ struct railviz::impl {
           std::pair{std::min(from_l, to_l), std::max(from_l, to_l)};
       auto const shape = tt_.get_shape(r.trip_idx_, shape_.get());
       auto const polyline_indices = std::vector<int64_t>{
-          utl::get_or_create(polyline_indices_cache, key, [&] {
-            auto const [first, second] =
-                (key.first == from_l) ? std::pair(get_coordinate(key.first),
-                                                  get_coordinate(key.second))
-                                      : std::pair(get_coordinate(key.second),
-                                                  get_coordinate(key.first));
-            append_leg(enc, shape, first, second);
-            fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-            enc.reset();
-            return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
-          })};
+          utl::get_or_create(
+              polyline_indices_cache, key,
+              [&] {
+                append_shape_leg(enc, shape, get_coordinate(key.first),
+                                 get_coordinate(key.second),
+                                 (key.first == from_l));
+                fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
+                enc.reset();
+                return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
+              }) *
+          (key.first != from_l ? -1 : 1)};
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),
           static_cast<int>(fr.get_clasz()),
