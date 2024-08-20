@@ -48,7 +48,7 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
-  n::trip_idx_t trip_idx_ = n::trip_idx_t::invalid();
+  n::shape_idx_t shape_idx_ = n::shape_idx_t::invalid();
 };
 
 int min_zoom_level(n::clasz const clasz, float const distance) {
@@ -201,13 +201,16 @@ struct railviz::impl {
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
       for (auto const [from, to] : utl::pairwise(fr)) {
+        auto shape_idx = (r.trip_idx_ == n::trip_idx_t::invalid())
+                             ? n::shape_idx_t::invalid()
+                             : tt_.trip_shape_indices_[r.trip_idx_];
         runs.emplace_back(stop_pair{
             .r_ = r,
             .from_ = static_cast<n::stop_idx_t>(from.stop_idx_ -
                                                 fr.stop_range_.from_),
             .to_ =
                 static_cast<n::stop_idx_t>(to.stop_idx_ - fr.stop_range_.from_),
-            .trip_idx_ = r.trip_idx_,
+            .shape_idx_ = shape_idx,
         });
       }
     }
@@ -321,9 +324,9 @@ struct railviz::impl {
       return l;
     };
 
-    auto polyline_indices_cache =
-        n::hash_map<std::pair<n::location_idx_t, n::location_idx_t>,
-                    std::int64_t>{};
+    auto polyline_indices_cache = n::hash_map<
+        std::tuple<n::location_idx_t, n::location_idx_t, n::shape_idx_t>,
+        std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
     auto const get_coordinate = [tt = std::cref(tt_)](auto const& idx) {
@@ -338,21 +341,21 @@ struct railviz::impl {
       auto const from_l = add_station(from.get_location_idx());
       auto const to_l = add_station(to.get_location_idx());
 
-      auto const key =
-          std::pair{std::min(from_l, to_l), std::max(from_l, to_l)};
-      auto const shape = tt_.get_shape(r.trip_idx_, shape_.get());
+      auto const key = std::tuple{std::min(from_l, to_l),
+                                  std::max(from_l, to_l), r.shape_idx_};
       auto const polyline_indices = std::vector<int64_t>{
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                append_shape_leg(enc, shape, get_coordinate(key.first),
-                                 get_coordinate(key.second),
-                                 (key.first == from_l));
+                auto const shape = tt_.get_shape(r.shape_idx_, shape_.get());
+                append_shape_leg(enc, shape, get_coordinate(std::get<0>(key)),
+                                 get_coordinate(std::get<1>(key)),
+                                 (std::get<0>(key) == from_l));
                 fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
                 enc.reset();
                 return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
               }) *
-          (key.first != from_l ? -1 : 1)};
+          (std::get<0>(key) != from_l ? -1 : 1)};
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),
           static_cast<int>(fr.get_clasz()),
