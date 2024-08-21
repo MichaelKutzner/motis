@@ -278,6 +278,10 @@ struct railviz::impl {
     // geo::polyline shape_{};
     geo::latlng begin_;
     size_t offset_;
+    void update(shape_state const& other) {
+      begin_ = other.begin_;
+      offset_ += other.offset_;
+    }
   };
 
   static inline void append_shape_leg(auto& enc, auto const& shape,
@@ -297,6 +301,17 @@ struct railviz::impl {
       }
       enc.push(from.begin_);
     }
+  }
+
+  static inline shape_state& get_begin_state(auto& cache, auto const& shape_index, auto const& shape, auto const& get_coordinate) {
+    static auto state = shape_state{};
+    if (shape_index == n::shape_idx_t::invalid() || shape.size() == 0) {
+      return state = { .begin_ = get_coordinate(), .offset_ = 0u, };
+    }
+    return utl::get_or_create(cache, shape_index,
+        [&shape] -> shape_state {
+          return { .begin_ = shape[0], .offset_ = 0u, };
+    });
   }
 
   static inline shape_state get_end_state(auto const& shape, auto const& get_coordinate, bool const is_last) {
@@ -360,21 +375,12 @@ struct railviz::impl {
               polyline_indices_cache, key,
               [&] {
                 auto shape = tt_.get_shape(r.shape_idx_, shape_.get());
-                auto& state = utl::get_or_create(shape_cache, r.shape_idx_,
-                    [&shape, &from_l, &get_coordinate] -> shape_state {
-                      if (shape.size() == 0) {
-                        return { .begin_ = get_coordinate(from_l), .offset_ = 0u, };
-                      } else {
-                        return { .begin_ = shape[0], .offset_ = 0u, };
-                      }
-                });
-                // std::cout << std::format("Route: {} -> {} (skipped: {})", from.name(), to.name(), state.offset_) << std::endl;
-                auto const sub_shape = std::ranges::subrange(shape.begin() + state.offset_, shape.end());
+                auto& begin = get_begin_state(shape_cache, r.shape_idx_, shape, [&get_coordinate, &from_l](){ return get_coordinate(from_l); });
+                auto const sub_shape = std::ranges::subrange(shape.begin() + begin.offset_, shape.end());
                 auto const end = get_end_state(sub_shape, [&get_coordinate, &to_l](){ return get_coordinate(to_l); }, r.last_);
-                append_shape_leg(enc, sub_shape, state, end,
+                append_shape_leg(enc, sub_shape, begin, end,
                                  (std::get<0>(key) == from_l));
-                state.begin_ = end.begin_;
-                state.offset_ += end.offset_;
+                begin.update(end);
                 fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
                 enc.reset();
                 return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
