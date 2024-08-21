@@ -269,9 +269,8 @@ struct railviz::impl {
   }
 
   static inline auto get_shape_ranges(auto const& end) {
-    return (end > 1)
-           ? std::views::iota(size_t{1}, end + 1)
-           : std::views::iota(size_t{0}, size_t{0});
+    return (end > 1) ? std::views::iota(size_t{1}, end + 1)
+                     : std::views::iota(size_t{0}, size_t{0});
   }
 
   struct shape_state {
@@ -303,28 +302,47 @@ struct railviz::impl {
     }
   }
 
-  inline shape_state& get_begin_state(auto& cache, auto const& shape_index, auto const& get_coordinate) const {
+  inline shape_state& get_begin_state(auto& cache, auto const& shape_index,
+                                      auto const& get_coordinate) const {
     static auto state = shape_state{};
     auto shape = tt_.get_shape(shape_index, shape_.get());
     if (shape.size() == 0) {
-      return state = { .shape_ = {}, .begin_ = get_coordinate(), .offset_ = 0u, };
+      return state = {
+                 .shape_ = {},
+                 .begin_ = get_coordinate(),
+                 .offset_ = 0u,
+             };
     }
-    return utl::get_or_create(cache, shape_index,
-        [&shape] -> shape_state {
-          return { .shape_ = shape, .begin_ = shape[0], .offset_ = 0u, };
+    return utl::get_or_create(cache, shape_index, [&shape] -> shape_state {
+      return {
+          .shape_ = shape,
+          .begin_ = shape[0],
+          .offset_ = 0u,
+      };
     });
   }
 
-  static inline shape_state get_end_state(auto const& shape, auto const& get_coordinate, bool const is_last) {
+  static inline shape_state get_end_state(auto const& shape,
+                                          auto const& get_coordinate,
+                                          bool const is_last) {
     if (shape.size() == 0) {
-      return { .begin_ = get_coordinate(), .offset_ = 0u, };
+      return {
+          .begin_ = get_coordinate(),
+          .offset_ = 0u,
+      };
     }
     if (is_last) {
       // Number of segments == size - 1; keep last segment
-      return { .begin_ = *(--shape.end()), .offset_ = shape.size() - 2, };
+      return {
+          .begin_ = *(--shape.end()),
+          .offset_ = shape.size() - 2,
+      };
     }
     auto best = ::osr::distance_to_way(get_coordinate(), shape);
-    return { .begin_ = best.best_, .offset_ = best.segment_idx_, };
+    return {
+        .begin_ = best.best_,
+        .offset_ = best.segment_idx_,
+    };
   }
 
   mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
@@ -375,13 +393,16 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto& begin = get_begin_state(
-                  shape_cache,
-                  r.shape_idx_,
-                  [&get_coordinate, &from_l](){ return get_coordinate(from_l);
-                });
-                auto const sub_shape = std::ranges::subrange(begin.shape_.begin() + begin.offset_, begin.shape_.end());
-                auto const end = get_end_state(sub_shape, [&get_coordinate, &to_l](){ return get_coordinate(to_l); }, r.last_);
+                auto& begin = get_begin_state(shape_cache, r.shape_idx_,
+                                              [&get_coordinate, &from_l]() {
+                                                return get_coordinate(from_l);
+                                              });
+                auto const sub_shape = std::ranges::subrange(
+                    begin.shape_.begin() + begin.offset_, begin.shape_.end());
+                auto const end = get_end_state(
+                    sub_shape,
+                    [&get_coordinate, &to_l]() { return get_coordinate(to_l); },
+                    r.last_);
                 append_shape_leg(enc, sub_shape, begin, end,
                                  (std::get<0>(key) == from_l));
                 begin.update(end);
