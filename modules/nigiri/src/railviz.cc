@@ -275,7 +275,7 @@ struct railviz::impl {
   }
 
   struct shape_state {
-    // geo::polyline shape_{};
+    geo::polyline shape_{};
     geo::latlng begin_;
     size_t offset_;
     void update(shape_state const& other) {
@@ -303,14 +303,15 @@ struct railviz::impl {
     }
   }
 
-  static inline shape_state& get_begin_state(auto& cache, auto const& shape_index, auto const& shape, auto const& get_coordinate) {
+  inline shape_state& get_begin_state(auto& cache, auto const& shape_index, auto const& get_coordinate) const {
     static auto state = shape_state{};
-    if (shape_index == n::shape_idx_t::invalid() || shape.size() == 0) {
-      return state = { .begin_ = get_coordinate(), .offset_ = 0u, };
+    auto shape = tt_.get_shape(shape_index, shape_.get());
+    if (shape.size() == 0) {
+      return state = { .shape_ = {}, .begin_ = get_coordinate(), .offset_ = 0u, };
     }
     return utl::get_or_create(cache, shape_index,
         [&shape] -> shape_state {
-          return { .begin_ = shape[0], .offset_ = 0u, };
+          return { .shape_ = shape, .begin_ = shape[0], .offset_ = 0u, };
     });
   }
 
@@ -374,9 +375,12 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto shape = tt_.get_shape(r.shape_idx_, shape_.get());
-                auto& begin = get_begin_state(shape_cache, r.shape_idx_, shape, [&get_coordinate, &from_l](){ return get_coordinate(from_l); });
-                auto const sub_shape = std::ranges::subrange(shape.begin() + begin.offset_, shape.end());
+                auto& begin = get_begin_state(
+                  shape_cache,
+                  r.shape_idx_,
+                  [&get_coordinate, &from_l](){ return get_coordinate(from_l);
+                });
+                auto const sub_shape = std::ranges::subrange(begin.shape_.begin() + begin.offset_, begin.shape_.end());
                 auto const end = get_end_state(sub_shape, [&get_coordinate, &to_l](){ return get_coordinate(to_l); }, r.last_);
                 append_shape_leg(enc, sub_shape, begin, end,
                                  (std::get<0>(key) == from_l));
