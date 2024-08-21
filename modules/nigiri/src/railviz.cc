@@ -200,6 +200,7 @@ struct railviz::impl {
       }
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
+      std::cout << "No. of pairs(+1): " << fr.size() << std::endl;
       for (auto const [from, to] : utl::pairwise(fr)) {
         auto shape_idx = (r.trip_idx_ == n::trip_idx_t::invalid())
                              ? n::shape_idx_t::invalid()
@@ -264,6 +265,7 @@ struct railviz::impl {
 
   static inline auto get_shape_ranges(auto const& start, auto const& end,
                                       auto const& max) {
+    std::cout << "Range: " << start << " -> " << end << std::endl;
     if (start <= end) {
       return std::ranges::join_view(std::vector{
           std::ranges::iota_view(start, end + 1),
@@ -276,13 +278,13 @@ struct railviz::impl {
     }
   }
 
-  static inline void append_shape_leg(auto& enc, auto const& shape,
+  static inline size_t append_shape_leg(auto& enc, auto const& shape,
                                       auto const& from, auto const& to,
                                       bool const forwards) {
     if (shape.size() == 0) {
       enc.push(from);
       enc.push(to);
-      return;
+      return 0;
     }
     auto p1 = ::osr::distance_to_way(from, shape);
     auto p2 = ::osr::distance_to_way(to, shape);
@@ -291,12 +293,14 @@ struct railviz::impl {
            get_shape_ranges(p1.segment_idx_, p2.segment_idx_, shape.size())) {
         enc.push(shape[index]);
       }
+      return p2.segment_idx_;
     } else {
       for (auto const& index :
            get_shape_ranges(p2.segment_idx_, p1.segment_idx_, shape.size()) |
                std::views::reverse) {
         enc.push(shape[index]);
       }
+      return p1.segment_idx_;
     }
   }
 
@@ -324,6 +328,7 @@ struct railviz::impl {
       return l;
     };
 
+    auto shape_cache = n::hash_map<n::shape_idx_t, size_t>{};
     auto polyline_indices_cache = n::hash_map<
         std::tuple<n::location_idx_t, n::location_idx_t, n::shape_idx_t>,
         std::int64_t>{};
@@ -348,7 +353,10 @@ struct railviz::impl {
               polyline_indices_cache, key,
               [&] {
                 auto const shape = tt_.get_shape(r.shape_idx_, shape_.get());
-                append_shape_leg(enc, shape, get_coordinate(std::get<0>(key)),
+                auto& start_offset = utl::get_or_create(shape_cache, r.shape_idx_, [] { return 0; });
+                std::cout << std::format("Route: {} -> {} (skipped: {})", from.name(), to.name(), start_offset) << std::endl;
+                auto const sub_shape = std::ranges::subrange(shape.begin() + start_offset, shape.end());
+                start_offset += append_shape_leg(enc, sub_shape, get_coordinate(std::get<0>(key)),
                                  get_coordinate(std::get<1>(key)),
                                  (std::get<0>(key) == from_l));
                 fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
