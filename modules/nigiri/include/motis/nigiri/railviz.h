@@ -19,8 +19,6 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-
-
 using shape_ptr = std::unique_ptr<::nigiri::mm_vecvec<uint32_t, ::geo::latlng>>;
 
 struct tag_lookup;

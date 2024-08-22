@@ -5,7 +5,6 @@
 #include "boost/geometry/index/rtree.hpp"
 #include "boost/iterator/function_output_iterator.hpp"
 
-#include "nigiri/types.h"
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
@@ -20,6 +19,7 @@
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "osr/lookup.h"
 
