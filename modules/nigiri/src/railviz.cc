@@ -307,8 +307,7 @@ struct railviz::impl {
   };
 
   inline shape_state& get_from_state(auto& cache, auto const& shape_index,
-                                     auto const& location_index) const {
-    static auto state = shape_state{};
+                                     auto const& location_index, auto& state) const {
     auto shape = tt_.get_shape(shape_index, shape_.get());
     if (shape.size() == 0) {
       return state = {
@@ -376,6 +375,7 @@ struct railviz::impl {
     auto polyline_indices_cache = n::hash_map<
         std::tuple<n::location_idx_t, n::location_idx_t, n::shape_idx_t>,
         std::int64_t>{};
+    auto state = shape_state{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
@@ -393,7 +393,7 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto& from = get_from_state(shape_cache, r.shape_idx_, from_l);
+                auto& from = get_from_state(shape_cache, r.shape_idx_, from_l, state);
                 auto const sub_shape = std::ranges::subrange(
                     from.shape_.begin() + from.offset_, from.shape_.end());
                 auto const to = get_to_state(sub_shape, to_l, r.last_);
