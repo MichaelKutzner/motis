@@ -178,6 +178,16 @@ struct rt_transport_geo_index {
   rt_rtree rtree_{};
 };
 
+struct shape_state {
+  geo::polyline shape_{};
+  geo::latlng coordinate_;
+  size_t offset_;
+  void update(shape_state const& other) {
+    coordinate_ = other.coordinate_;
+    offset_ += other.offset_;
+  }
+};
+
 struct railviz::impl {
   impl(tag_lookup const& tags, n::timetable const& tt, shape_ptr&& shape)
       : tags_{tags}, tt_{tt}, shape_{std::move(shape)} {
@@ -273,74 +283,67 @@ struct railviz::impl {
                      : std::views::iota(size_t{0}, size_t{0});
   }
 
-  struct shape_state {
-    geo::polyline shape_{};
-    geo::latlng begin_;
-    size_t offset_;
-    void update(shape_state const& other) {
-      begin_ = other.begin_;
-      offset_ += other.offset_;
-    }
-  };
-
-  static inline void append_shape_leg(auto& enc, auto const& shape,
-                                      auto const& from, auto const& to,
-                                      bool const forwards) {
+  static inline void encode_shape_segment(auto& enc, auto const& shape,
+                                          auto const& from, auto const& to,
+                                          bool const forwards) {
     auto segment = get_shape_ranges(to.offset_);
     if (forwards) {
-      enc.push(from.begin_);
+      enc.push(from.coordinate_);
       for (auto const& index : segment) {
         enc.push(shape[index]);
       }
-      enc.push(to.begin_);
+      enc.push(to.coordinate_);
     } else {
-      enc.push(to.begin_);
+      enc.push(to.coordinate_);
       for (auto const& index : segment | std::views::reverse) {
         enc.push(shape[index]);
       }
-      enc.push(from.begin_);
+      enc.push(from.coordinate_);
     }
   }
 
-  inline shape_state& get_begin_state(auto& cache, auto const& shape_index,
-                                      auto const& get_coordinate) const {
+  auto get_coordinate(auto const& idx) const {
+    return tt_.locations_.coordinates_.at(idx);
+  };
+
+  inline shape_state& get_from_state(auto& cache, auto const& shape_index,
+                                     auto const& location_index) const {
     static auto state = shape_state{};
     auto shape = tt_.get_shape(shape_index, shape_.get());
     if (shape.size() == 0) {
       return state = {
-                 .shape_ = {},
-                 .begin_ = get_coordinate(),
+                 .shape_ = shape,
+                 .coordinate_ = get_coordinate(location_index),
                  .offset_ = 0u,
              };
     }
     return utl::get_or_create(cache, shape_index, [&shape] -> shape_state {
       return {
           .shape_ = shape,
-          .begin_ = shape[0],
+          .coordinate_ = shape[0],
           .offset_ = 0u,
       };
     });
   }
 
-  static inline shape_state get_end_state(auto const& shape,
-                                          auto const& get_coordinate,
-                                          bool const is_last) {
-    if (shape.size() == 0) {
+  inline shape_state get_to_state(auto const& shape, auto const& location_index,
+                                  bool const is_last) const {
+    if (shape.size() < 2) {
       return {
-          .begin_ = get_coordinate(),
+          .coordinate_ = get_coordinate(location_index),
           .offset_ = 0u,
       };
     }
     if (is_last) {
       // Number of segments == size - 1; keep last segment
       return {
-          .begin_ = *(--shape.end()),
+          .coordinate_ = *(--shape.end()),
           .offset_ = shape.size() - 2,
       };
     }
-    auto best = ::osr::distance_to_way(get_coordinate(), shape);
+    auto best = ::osr::distance_to_way(get_coordinate(location_index), shape);
     return {
-        .begin_ = best.best_,
+        .coordinate_ = best.best_,
         .offset_ = best.segment_idx_,
     };
   }
@@ -375,9 +378,6 @@ struct railviz::impl {
         std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
-    auto const get_coordinate = [tt = std::cref(tt_)](auto const& idx) {
-      return tt.get().locations_.coordinates_.at(idx);
-    };
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
       auto const fr = n::rt::frun{tt_, rtt_.get(), r.r_};
 
@@ -393,19 +393,13 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto& begin = get_begin_state(shape_cache, r.shape_idx_,
-                                              [&get_coordinate, &from_l]() {
-                                                return get_coordinate(from_l);
-                                              });
+                auto& from = get_from_state(shape_cache, r.shape_idx_, from_l);
                 auto const sub_shape = std::ranges::subrange(
-                    begin.shape_.begin() + begin.offset_, begin.shape_.end());
-                auto const end = get_end_state(
-                    sub_shape,
-                    [&get_coordinate, &to_l]() { return get_coordinate(to_l); },
-                    r.last_);
-                append_shape_leg(enc, sub_shape, begin, end,
-                                 (std::get<0>(key) == from_l));
-                begin.update(end);
+                    from.shape_.begin() + from.offset_, from.shape_.end());
+                auto const to = get_to_state(sub_shape, to_l, r.last_);
+                encode_shape_segment(enc, sub_shape, from, to,
+                                     (std::get<0>(key) == from_l));
+                from.update(to);
                 fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
                 enc.reset();
                 return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
