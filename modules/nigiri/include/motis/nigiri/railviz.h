@@ -6,9 +6,9 @@
 #include "cista/mmap.h"
 
 #include "geo/box.h"
+#include "geo/latlng.h"
 
 #include "nigiri/types.h"
-#include "nigiri/types2.h"
 
 #include "motis/module/message.h"
 
@@ -19,7 +19,9 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-using shape_ptr = std::unique_ptr<mm_vecvec<uint32_t, ::geo::latlng>>;
+
+
+using shape_ptr = std::unique_ptr<::nigiri::mm_vecvec<uint32_t, ::geo::latlng>>;
 
 struct tag_lookup;
 

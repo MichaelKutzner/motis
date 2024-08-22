@@ -4,10 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "geo/latlng.h"
-
-#include "nigiri/types2.h"
-
 #include "motis/module/module.h"
 
 namespace motis::nigiri {
