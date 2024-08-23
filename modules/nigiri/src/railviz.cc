@@ -18,6 +18,7 @@
 #include "nigiri/rt/frun.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/run.h"
+#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
 
@@ -308,7 +309,7 @@ struct railviz::impl {
 
   inline shape_state& get_from_state(auto& cache, auto const& shape_index,
                                      auto const& location_index, auto& state) const {
-    auto shape = tt_.get_shape(shape_index, shape_.get());
+    auto shape = get_shape(shape_index, shape_.get());
     if (shape.size() == 0) {
       return state = {
                  .shape_ = shape,
