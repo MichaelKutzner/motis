@@ -19,7 +19,7 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-using shape_ptr = std::unique_ptr<::nigiri::mm_vecvec<uint32_t, ::geo::latlng>>;
+using shape_ptr = std::unique_ptr<::nigiri::mm_vecvec<::nigiri::shape_idx_t, ::geo::latlng>>;
 
 struct tag_lookup;
 
@@ -43,7 +43,7 @@ inline shape_ptr open_shape(std::string path,
   return std::make_unique<shape_ptr::element_type>(
       ::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
           ::cista::mmap{data_path.data(), mode}},
-      ::cista::basic_mmap_vec<cista::base_t<uint32_t>, std::uint64_t>{
+      ::cista::basic_mmap_vec<cista::base_t<::nigiri::shape_idx_t>, std::uint64_t>{
           ::cista::mmap{metadata_path.data(), mode}});
 }
 
