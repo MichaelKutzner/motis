@@ -20,12 +20,12 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-using shape_ptr = std::optional<::nigiri::shape_vecvec_t>;
+using shape_data = std::optional<::nigiri::shape_vecvec_t>;
 
 struct tag_lookup;
 
 struct railviz {
-  railviz(tag_lookup const&, ::nigiri::timetable const&, shape_ptr&&);
+  railviz(tag_lookup const&, ::nigiri::timetable const&, shape_data&&);
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;
@@ -37,14 +37,15 @@ struct railviz {
   std::unique_ptr<impl> impl_;
 };
 
-inline shape_ptr open_shape(std::string path,
-                            ::cista::mmap::protection const mode) {
+inline shape_data open_shape(std::string path,
+                             ::cista::mmap::protection const mode) {
   auto data_path = path + ".data";
   auto metadata_path = path + ".metadata";
-  return std::make_optional<shape_ptr::value_type>(
+  return std::make_optional<shape_data::value_type>(
       ::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
           ::cista::mmap{data_path.data(), mode}},
-      ::cista::basic_mmap_vec<cista::base_t<::nigiri::shape_idx_t>, std::uint64_t>{
+      ::cista::basic_mmap_vec<cista::base_t<::nigiri::shape_idx_t>,
+                              std::uint64_t>{
           ::cista::mmap{metadata_path.data(), mode}});
 }
 

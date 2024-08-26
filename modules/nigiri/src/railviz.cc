@@ -191,7 +191,7 @@ struct shape_state {
 };
 
 struct railviz::impl {
-  impl(tag_lookup const& tags, n::timetable const& tt, shape_ptr&& shape)
+  impl(tag_lookup const& tags, n::timetable const& tt, shape_data&& shape)
       : tags_{tags}, tt_{tt}, shape_{std::move(shape)} {
     static_distances_.resize(tt_.route_location_seq_.size());
     for (auto c = int_clasz{0U}; c != n::kNumClasses; ++c) {
@@ -309,9 +309,14 @@ struct railviz::impl {
   };
 
   inline shape_state& get_from_state(auto& cache, auto const& shape_index,
-                                     auto const& location_index, auto& state) const {
-    auto shape = shape_.and_then([&](auto const& shape) -> std::optional<geo::polyline> { return get_shape(shape_index, shape); })
-      .value_or(geo::polyline{});
+                                     auto const& location_index,
+                                     auto& state) const {
+    auto shape =
+        shape_
+            .and_then([&](auto const& shape) -> std::optional<geo::polyline> {
+              return get_shape(shape_index, shape);
+            })
+            .value_or(geo::polyline{});
     if (shape.size() == 0) {
       return state = {
                  .shape_ = shape,
@@ -396,7 +401,8 @@ struct railviz::impl {
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
-                auto& from = get_from_state(shape_cache, r.shape_idx_, from_l, state);
+                auto& from =
+                    get_from_state(shape_cache, r.shape_idx_, from_l, state);
                 auto const sub_shape = std::ranges::subrange(
                     from.shape_.begin() + from.offset_, from.shape_.end());
                 auto const to = get_to_state(sub_shape, to_l, r.last_);
@@ -519,7 +525,7 @@ struct railviz::impl {
 
   tag_lookup const& tags_;
   n::timetable const& tt_;
-  shape_ptr shape_;
+  shape_data shape_;
   std::shared_ptr<n::rt_timetable> rtt_;
   std::array<route_geo_index, n::kNumClasses> static_geo_indices_;
   std::array<rt_transport_geo_index, n::kNumClasses> rt_geo_indices_;
@@ -528,7 +534,7 @@ struct railviz::impl {
 };
 
 railviz::railviz(tag_lookup const& tags, n::timetable const& tt,
-                 shape_ptr&& shape)
+                 shape_data&& shape)
     : impl_{std::make_unique<impl>(tags, tt, std::move(shape))} {}
 
 mm::msg_ptr railviz::get_trains(mm::msg_ptr const& msg) const {
