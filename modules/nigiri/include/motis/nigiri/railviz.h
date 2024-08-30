@@ -1,7 +1,6 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 
 #include "cista/containers/mmap_vec.h"
 #include "cista/mmap.h"
@@ -20,7 +19,7 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-using shape_data = std::optional<::nigiri::shape_vecvec_t>;
+using shape_data = std::unique_ptr<::nigiri::shape_vecvec_t>;
 
 struct tag_lookup;
 
@@ -41,7 +40,7 @@ inline shape_data open_shape(std::string path,
                              ::cista::mmap::protection const mode) {
   auto data_path = path + ".data";
   auto metadata_path = path + ".metadata";
-  return std::make_optional<shape_data::value_type>(
+  return std::make_unique<shape_data::element_type>(
       ::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
           ::cista::mmap{data_path.data(), mode}},
       ::cista::basic_mmap_vec<cista::base_t<::nigiri::shape_idx_t>,

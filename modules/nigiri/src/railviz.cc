@@ -5,7 +5,6 @@
 #include "boost/geometry/index/rtree.hpp"
 #include "boost/iterator/function_output_iterator.hpp"
 
-#include "geo/polyline.h"
 #include "utl/enumerate.h"
 #include "utl/get_or_create.h"
 #include "utl/to_vec.h"
@@ -310,12 +309,7 @@ struct railviz::impl {
   inline shape_state& get_from_state(auto& cache, auto const& shape_index,
                                      auto const& location_index,
                                      auto& state) const {
-    auto shape =
-        shape_
-            .and_then([&](auto const& shape) -> std::optional<geo::polyline> {
-              return get_shape(shape_index, shape);
-            })
-            .value_or(geo::polyline{});
+    auto const shape = (shape_.get() == nullptr) ? geo::polyline{} : get_shape(shape_index, *shape_);
     if (shape.size() == 0) {
       return state = {
                  .shape_ = shape,
