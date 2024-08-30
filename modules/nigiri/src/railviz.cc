@@ -309,7 +309,9 @@ struct railviz::impl {
   inline shape_state& get_from_state(auto& cache, auto const& shape_index,
                                      auto const& location_index,
                                      auto& state) const {
-    auto const shape = (shape_.get() == nullptr) ? geo::polyline{} : get_shape(shape_index, *shape_);
+    auto const shape = (shape_.get() == nullptr)
+                           ? geo::polyline{}
+                           : get_shape(shape_index, *shape_);
     if (shape.size() == 0) {
       return state = {
                  .shape_ = shape,
@@ -341,7 +343,8 @@ struct railviz::impl {
           .offset_ = shape.size() - 2,
       };
     }
-    auto best = geo::distance_to_polyline(get_coordinate(location_index), shape);
+    auto best =
+        geo::distance_to_polyline(get_coordinate(location_index), shape);
     return {
         .coordinate_ = best.best_,
         .offset_ = best.segment_idx_,
