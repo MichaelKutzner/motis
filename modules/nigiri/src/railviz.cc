@@ -12,6 +12,7 @@
 
 #include "geo/detail/register_box.h"
 #include "geo/latlng.h"
+#include "geo/polyline.h"
 #include "geo/polyline_format.h"
 
 #include "nigiri/common/linear_lower_bound.h"
@@ -22,8 +23,6 @@
 #include "nigiri/shape.h"
 #include "nigiri/timetable.h"
 #include "nigiri/types.h"
-
-#include "osr/lookup.h"
 
 #include "motis/core/conv/position_conv.h"
 #include "motis/core/conv/trip_conv.h"
@@ -348,7 +347,7 @@ struct railviz::impl {
           .offset_ = shape.size() - 2,
       };
     }
-    auto best = ::osr::distance_to_way(get_coordinate(location_index), shape);
+    auto best = geo::distance_to_polyline(get_coordinate(location_index), shape);
     return {
         .coordinate_ = best.best_,
         .offset_ = best.segment_idx_,
