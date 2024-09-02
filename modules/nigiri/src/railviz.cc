@@ -179,7 +179,7 @@ struct rt_transport_geo_index {
 };
 
 struct shape_state {
-  geo::polyline shape_{};
+  std::span<geo::latlng const> shape_{};
   geo::latlng coordinate_;
   size_t offset_;
   void update(shape_state const& other) {
@@ -310,8 +310,8 @@ struct railviz::impl {
                                      auto const& location_index,
                                      auto& state) const {
     auto const shape = (shape_.get() == nullptr)
-                           ? geo::polyline{}
-                           : get_shape(shape_index, *shape_);
+                           ? std::span<geo::latlng const>{}
+                           : get_shape(*shape_, shape_index);
     if (shape.size() == 0) {
       return state = {
                  .shape_ = shape,
