@@ -24,7 +24,7 @@ motis::module::msg_ptr trip_to_connection(tag_lookup const& tags,
                                           ::nigiri::rt_timetable const* rtt,
                                           motis::module::msg_ptr const& msg) {
   auto const et = to_extern_trip(motis_content(TripId, msg));
-  auto const r = resolve_run(tags, tt, et);
+  auto const [r, trip_index] = resolve_run(tags, tt, et);
   if (!r.valid()) {
     LOG(logging::error) << "unable to find trip " << et.to_str();
     throw utl::fail("unable to resolve {}, departure {} at {}", et.id_,

@@ -205,7 +205,10 @@ struct railviz::impl {
     auto runs = std::vector<stop_pair>{};
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
-      auto const r = resolve_run(tags_, tt_, et);
+      auto const [r, trip_index] = resolve_run(tags_, tt_, et);
+      auto const shape_idx = (trip_index == n::trip_idx_t::invalid())
+                            ? n::shape_idx_t::invalid()
+                            : tt_.trip_shape_indices_[r.trip_idx_];
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
@@ -214,9 +217,6 @@ struct railviz::impl {
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
       stop_pair* last = nullptr;
       for (auto const [from, to] : utl::pairwise(fr)) {
-        auto shape_idx = (r.trip_idx_ == n::trip_idx_t::invalid())
-                             ? n::shape_idx_t::invalid()
-                             : tt_.trip_shape_indices_[r.trip_idx_];
         last = &runs.emplace_back(stop_pair{
             .r_ = r,
             .from_ = static_cast<n::stop_idx_t>(from.stop_idx_ -

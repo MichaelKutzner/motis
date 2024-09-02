@@ -12,7 +12,7 @@ namespace n = nigiri;
 
 namespace motis::nigiri {
 
-n::rt::run resolve_run(tag_lookup const& tags, n::timetable const& tt,
+std::pair<n::rt::run, n::trip_idx_t> resolve_run(tag_lookup const& tags, n::timetable const& tt,
                        extern_trip const& et) {
   auto const [tag, trip_id] = split_tag_and_location_id(et.id_);
   auto const src = tags.get_src(tag);
@@ -51,8 +51,8 @@ n::rt::run resolve_run(tag_lookup const& tags, n::timetable const& tt,
         continue;
       }
 
-      return n::rt::run{
-          .t_ = t, .stop_range_ = stop_range, .trip_idx_ = i->second};
+      return std::make_pair(n::rt::run{.t_ = t, .stop_range_ = stop_range},
+                            i->second);
     }
   }
 
