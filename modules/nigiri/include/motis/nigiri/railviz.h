@@ -38,8 +38,8 @@ struct railviz {
 
 inline shape_data open_shape(std::string path,
                              ::cista::mmap::protection const mode) {
-  auto data_path = path + ".data";
-  auto metadata_path = path + ".metadata";
+  auto const data_path = path + ".data";
+  auto const metadata_path = path + ".metadata";
   return std::make_unique<shape_data::element_type>(
       ::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
           ::cista::mmap{data_path.data(), mode}},

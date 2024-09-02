@@ -49,7 +49,7 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
-  n::shape_idx_t shape_idx_ = n::shape_idx_t::invalid();
+  n::shape_idx_t shape_idx_{n::shape_idx_t::invalid()};
   bool last_ = false;
 };
 
@@ -179,13 +179,13 @@ struct rt_transport_geo_index {
 };
 
 struct shape_state {
-  std::span<geo::latlng const> shape_{};
-  geo::latlng coordinate_;
-  size_t offset_;
   void update(shape_state const& other) {
     coordinate_ = other.coordinate_;
     offset_ += other.offset_;
   }
+  std::span<geo::latlng const> shape_{};
+  geo::latlng coordinate_;
+  std::size_t offset_;
 };
 
 struct railviz::impl {
@@ -278,15 +278,17 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  static inline auto get_shape_ranges(auto const& end) {
-    return (end > 1) ? std::views::iota(size_t{1}, end + 1)
-                     : std::views::iota(size_t{0}, size_t{0});
+  static inline auto get_shape_ranges(std::size_t const& end) {
+    constexpr auto begin = std::size_t{1};
+    return (end > 1) ? std::views::iota(begin, end + 1)
+                     : std::views::iota(begin, begin);
   }
 
-  static inline void encode_shape_segment(auto& enc, auto const& shape,
-                                          auto const& from, auto const& to,
+  template <long N, std::ranges::range Range>
+  static inline void encode_shape_segment(geo::polyline_encoder<N>& enc, Range const& shape,
+                                          shape_state const& from, shape_state const& to,
                                           bool const forwards) {
-    auto segment = get_shape_ranges(to.offset_);
+    auto const segment = get_shape_ranges(to.offset_);
     if (forwards) {
       enc.push(from.coordinate_);
       for (auto const& index : segment) {
