@@ -208,7 +208,7 @@ struct railviz::impl {
       auto const [r, trip_index] = resolve_run(tags_, tt_, et);
       auto const shape_idx = (trip_index == n::trip_idx_t::invalid())
                             ? n::shape_idx_t::invalid()
-                            : tt_.trip_shape_indices_[r.trip_idx_];
+                            : tt_.trip_shape_indices_[trip_index];
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
