@@ -314,18 +314,16 @@ struct railviz::impl {
       n::hash_map<n::shape_idx_t, shape_state>& cache,
       n::shape_idx_t const& shape_index,
       n::location_idx_t const& location_index, shape_state& state) const {
-    auto const shape = (shape_.get() == nullptr)
-                           ? std::span<geo::latlng const>{}
-                           : get_shape(*shape_, shape_index);
-    if (shape.size() == 0) {
+    if (shape_.get() == nullptr || shape_index == n::shape_idx_t::invalid()) {
       return state = {
-                 .shape_ = shape,
+                 .shape_ = std::span<geo::latlng const>{},
                  .coordinate_ = get_coordinate(location_index),
                  .offset_ = 0u,
              };
     }
-    return utl::get_or_create(cache, shape_index, [&shape] -> shape_state {
-      return {
+    return utl::get_or_create(cache, shape_index, [&] {
+      auto const shape = get_shape(*shape_, shape_index);
+      return shape_state{
           .shape_ = shape,
           .coordinate_ = shape[0],
           .offset_ = 0u,
