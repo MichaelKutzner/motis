@@ -9,7 +9,6 @@
 #include "nigiri/loader/gtfs/load_timetable.h"
 #include "nigiri/loader/init_finish.h"
 #include "nigiri/timetable.h"
-#include "nigiri/types.h"
 
 #include "motis/core/conv/trip_conv.h"
 #include "motis/core/journey/extern_trip.h"

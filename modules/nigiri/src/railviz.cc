@@ -50,7 +50,7 @@ struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
   n::shape_idx_t shape_idx_{n::shape_idx_t::invalid()};
-  bool last_ = false;
+  bool last_{false};
 };
 
 int min_zoom_level(n::clasz const clasz, float const distance) {
@@ -207,8 +207,8 @@ struct railviz::impl {
       auto const et = to_extern_trip(t);
       auto const [r, trip_index] = resolve_run(tags_, tt_, et);
       auto const shape_idx = (trip_index == n::trip_idx_t::invalid())
-                            ? n::shape_idx_t::invalid()
-                            : tt_.trip_shape_indices_[trip_index];
+                                 ? n::shape_idx_t::invalid()
+                                 : tt_.trip_shape_indices_[trip_index];
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
@@ -278,15 +278,17 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  static inline auto get_shape_ranges(std::size_t const& end) {
+  static constexpr auto get_shape_ranges(std::size_t const& end) {
     constexpr auto begin = std::size_t{1};
     return (end > 1) ? std::views::iota(begin, end + 1)
                      : std::views::iota(begin, begin);
   }
 
   template <long N, std::ranges::range Range>
-  static inline void encode_shape_segment(geo::polyline_encoder<N>& enc, Range const& shape,
-                                          shape_state const& from, shape_state const& to,
+  static inline void encode_shape_segment(geo::polyline_encoder<N>& enc,
+                                          Range const& shape,
+                                          shape_state const& from,
+                                          shape_state const& to,
                                           bool const forwards) {
     auto const segment = get_shape_ranges(to.offset_);
     if (forwards) {
@@ -304,13 +306,14 @@ struct railviz::impl {
     }
   }
 
-  auto get_coordinate(auto const& idx) const {
+  auto get_coordinate(n::location_idx_t const& idx) const {
     return tt_.locations_.coordinates_.at(idx);
   };
 
-  inline shape_state& get_from_state(auto& cache, auto const& shape_index,
-                                     auto const& location_index,
-                                     auto& state) const {
+  inline shape_state& get_from_state(
+      n::hash_map<n::shape_idx_t, shape_state>& cache,
+      n::shape_idx_t const& shape_index,
+      n::location_idx_t const& location_index, shape_state& state) const {
     auto const shape = (shape_.get() == nullptr)
                            ? std::span<geo::latlng const>{}
                            : get_shape(*shape_, shape_index);
@@ -330,7 +333,9 @@ struct railviz::impl {
     });
   }
 
-  inline shape_state get_to_state(auto const& shape, auto const& location_index,
+  template <std::ranges::range Range>
+  inline shape_state get_to_state(Range const& shape,
+                                  n::location_idx_t const& location_index,
                                   bool const is_last) const {
     if (shape.size() < 2) {
       return {
