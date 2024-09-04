@@ -424,7 +424,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const data_dir = get_data_directory() / "nigiri";
         auto const dump_file_path = data_dir / fmt::to_string(h);
         auto const shape_dump_file_prefix =
-            std::string{dump_file_path} + std::string{"-shape"};
+            dump_file_path.string() + std::string{"-shape"};
         auto shape = shape_data{};
 
         auto loaded = false;
