@@ -398,7 +398,7 @@ struct railviz::impl {
 
       auto const key = std::tuple{std::min(from_l, to_l),
                                   std::max(from_l, to_l), r.shape_idx_};
-      auto const polyline_indices = std::vector<int64_t>{
+      auto const polyline_indices = std::vector<std::int64_t>{
           utl::get_or_create(
               polyline_indices_cache, key,
               [&] {
