@@ -284,7 +284,7 @@ struct railviz::impl {
                      : std::views::iota(begin, begin);
   }
 
-  template <long N, std::ranges::range Range>
+  template <std::int64_t N, std::ranges::range Range>
   static inline void encode_shape_segment(geo::polyline_encoder<N>& enc,
                                           Range const& shape,
                                           shape_state const& from,
@@ -318,7 +318,7 @@ struct railviz::impl {
       return state = {
                  .shape_ = std::span<geo::latlng const>{},
                  .coordinate_ = get_coordinate(location_index),
-                 .offset_ = 0u,
+                 .offset_ = 0U,
              };
     }
     return utl::get_or_create(cache, shape_index, [&] {
@@ -326,7 +326,7 @@ struct railviz::impl {
       return shape_state{
           .shape_ = shape,
           .coordinate_ = shape[0],
-          .offset_ = 0u,
+          .offset_ = 0U,
       };
     });
   }
@@ -338,7 +338,7 @@ struct railviz::impl {
     if (shape.size() < 2) {
       return {
           .coordinate_ = get_coordinate(location_index),
-          .offset_ = 0u,
+          .offset_ = 0U,
       };
     }
     if (is_last) {
