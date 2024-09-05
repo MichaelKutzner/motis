@@ -36,7 +36,7 @@ struct railviz {
   std::unique_ptr<impl> impl_;
 };
 
-inline shape_data open_shape(std::string path,
+inline shape_data open_shape(std::string const& path,
                              ::cista::mmap::protection const mode) {
   auto const data_path = path + ".data";
   auto const metadata_path = path + ".metadata";
