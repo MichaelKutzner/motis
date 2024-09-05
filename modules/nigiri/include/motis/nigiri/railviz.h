@@ -40,12 +40,13 @@ inline shape_data open_shape(std::string const& path,
                              ::cista::mmap::protection const mode) {
   auto const data_path = path + ".data";
   auto const metadata_path = path + ".metadata";
-  return std::make_unique<shape_data::element_type>(
+  using t = shape_data::element_type;
+  return std::make_unique<t>(t{
       ::cista::basic_mmap_vec<geo::latlng, std::uint64_t>{
           ::cista::mmap{data_path.data(), mode}},
       ::cista::basic_mmap_vec<cista::base_t<::nigiri::shape_idx_t>,
                               std::uint64_t>{
-          ::cista::mmap{metadata_path.data(), mode}});
+          ::cista::mmap{metadata_path.data(), mode}}});
 }
 
 }  // namespace motis::nigiri
