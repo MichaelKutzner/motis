@@ -426,7 +426,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         auto const shape_dump_file_prefix =
             dump_file_path.string() + std::string{"-shape"};
         auto shape = shape_data{};
-        if (railviz_ || ! no_cache_) {
+        if (railviz_ || !no_cache_) {
           std::filesystem::create_directories(data_dir);
         }
 
