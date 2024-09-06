@@ -8,6 +8,7 @@
 #include "fmt/std.h"
 
 #include "cista/memory_holder.h"
+#include "cista/mmap.h"
 
 #include "conf/date_time.h"
 
@@ -25,7 +26,9 @@
 #include "nigiri/rt/gtfsrt_update.h"
 #include "nigiri/rt/rt_timetable.h"
 #include "nigiri/rt/util.h"
+#include "nigiri/shape.h"
 #include "nigiri/timetable.h"
+#include "nigiri/types.h"
 
 #include "motis/core/common/logging.h"
 #include "motis/module/event_collector.h"
@@ -422,9 +425,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
         utl::verify(!datasets.empty(), "no schedule datasets found");
 
         auto const data_dir = get_data_directory() / "nigiri";
-        auto const dump_file_path = data_dir / fmt::to_string(h);
-        auto const shape_dump_file_prefix =
-            dump_file_path.string() + std::string{"-shape"};
+        auto const filename = fmt::to_string(h);
+        auto const dump_file_path = data_dir / filename;
+        auto const shapes_dump_file_prefix = data_dir / (filename + "-shapes");
         auto shape = shape_data{};
         if (railviz_ || !no_cache_) {
           std::filesystem::create_directories(data_dir);
@@ -443,8 +446,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
             auto traffic_day_bitfields =
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             if (railviz_) {
-              shape = open_shape(shape_dump_file_prefix,
-                                 cista::mmap::protection::WRITE);
+              shape = std::make_unique<n::shapes_storage_t>(
+                  n::create_shapes_storage(shapes_dump_file_prefix,
+                                           cista::mmap::protection::WRITE));
             }
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
@@ -497,8 +501,9 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                     n::rt::create_rt_timetable(**impl_->tt_, today)));
               }
               if (railviz_) {
-                shape = open_shape(shape_dump_file_prefix,
-                                   cista::mmap::protection::READ);
+                shape = std::make_unique<n::shapes_storage_t>(
+                    n::create_shapes_storage(shapes_dump_file_prefix,
+                                             cista::mmap::protection::READ));
               }
               loaded = true;
               break;
