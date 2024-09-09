@@ -206,9 +206,10 @@ struct railviz::impl {
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
       auto const [r, trip_index] = resolve_run(tags_, tt_, et);
-      auto const shape_idx = (trip_index == n::trip_idx_t::invalid())
-                                 ? n::shape_idx_t::invalid()
-                                 : tt_.trip_shape_indices_[trip_index];
+      auto const shape_idx = (trip_index != n::trip_idx_t::invalid() &&
+                              trip_index < tt_.trip_shape_indices_.size())
+                                 ? tt_.trip_shape_indices_[trip_index]
+                                 : n::shape_idx_t::invalid();
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
