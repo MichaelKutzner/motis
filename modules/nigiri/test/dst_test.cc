@@ -89,7 +89,7 @@ TEST(nigiri, dst_test) {
   ASSERT_EQ(1U, res->connections()->Get(0)->trips()->size());
   auto const et =
       to_extern_trip(res->connections()->Get(0)->trips()->Get(0)->id());
-  auto const [run, trip_index] = mn::resolve_run(tags, tt, et);
+  auto const run = mn::resolve_run(tags, tt, et);
   EXPECT_TRUE(run.valid());
 
   auto const move = res->connections()->Get(0)->transports()->Get(0);

@@ -49,7 +49,6 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
-  n::trip_idx_t trip_idx_{n::trip_idx_t::invalid()};
   bool last_{false};
 };
 
@@ -205,7 +204,7 @@ struct railviz::impl {
     auto runs = std::vector<stop_pair>{};
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
-      auto const [r, trip_index] = resolve_run(tags_, tt_, et);
+      auto const r = resolve_run(tags_, tt_, et);
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
@@ -220,7 +219,6 @@ struct railviz::impl {
                                                 fr.stop_range_.from_),
             .to_ =
                 static_cast<n::stop_idx_t>(to.stop_idx_ - fr.stop_range_.from_),
-            .trip_idx_ = trip_index,
         });
       }
       if (last != nullptr) {
@@ -314,7 +312,7 @@ struct railviz::impl {
       auto const to_l = add_station(to.get_location_idx());
 
       // FIXME nullptr check
-      auto const shape = fr.get_shape(*shape_, r.trip_idx_, n::interval{r.from_, r.to_});
+      auto const shape = fr.get_shape(*shape_, n::interval{r.from_, r.to_});
       auto const polyline_indices = std::vector<std::int64_t>{static_cast<std::int64_t>(fbs_polylines.size())};
       for (auto const& p : shape) {
         enc.push(p);
