@@ -49,7 +49,7 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
-  n::shape_idx_t shape_idx_{n::shape_idx_t::invalid()};
+  n::trip_idx_t trip_idx_{n::trip_idx_t::invalid()};
   bool last_{false};
 };
 
@@ -206,10 +206,6 @@ struct railviz::impl {
     for (auto const t : *req->trips()) {
       auto const et = to_extern_trip(t);
       auto const [r, trip_index] = resolve_run(tags_, tt_, et);
-      auto const shape_idx = (trip_index != n::trip_idx_t::invalid() &&
-                              trip_index < tt_.trip_shape_indices_.size())
-                                 ? tt_.trip_shape_indices_[trip_index]
-                                 : n::shape_idx_t::invalid();
       if (!r.valid()) {
         LOG(logging::error) << "unable to find trip " << et.to_str();
         continue;
@@ -224,7 +220,7 @@ struct railviz::impl {
                                                 fr.stop_range_.from_),
             .to_ =
                 static_cast<n::stop_idx_t>(to.stop_idx_ - fr.stop_range_.from_),
-            .shape_idx_ = shape_idx,
+            .trip_idx_ = trip_index,
         });
       }
       if (last != nullptr) {
@@ -279,84 +275,6 @@ struct railviz::impl {
     return create_response(runs);
   }
 
-  static constexpr auto get_shape_ranges(std::size_t const& end) {
-    constexpr auto begin = std::size_t{1};
-    return (end > 1) ? std::views::iota(begin, end + 1)
-                     : std::views::iota(begin, begin);
-  }
-
-  template <std::int64_t N, std::ranges::range Range>
-  static inline void encode_shape_segment(geo::polyline_encoder<N>& enc,
-                                          Range const& shape,
-                                          shape_state const& from,
-                                          shape_state const& to,
-                                          bool const forwards) {
-    auto const segment = get_shape_ranges(to.offset_);
-    if (forwards) {
-      enc.push(from.coordinate_);
-      for (auto const& index : segment) {
-        enc.push(shape[index]);
-      }
-      enc.push(to.coordinate_);
-    } else {
-      enc.push(to.coordinate_);
-      for (auto const& index : segment | std::views::reverse) {
-        enc.push(shape[index]);
-      }
-      enc.push(from.coordinate_);
-    }
-  }
-
-  auto get_coordinate(n::location_idx_t const& idx) const {
-    return tt_.locations_.coordinates_.at(idx);
-  };
-
-  inline shape_state& get_from_state(
-      n::hash_map<n::shape_idx_t, shape_state>& cache,
-      n::shape_idx_t const& shape_index,
-      n::location_idx_t const& location_index, shape_state& state) const {
-    if (shape_.get() == nullptr || shape_index == n::shape_idx_t::invalid()) {
-      return state = {
-                 .shape_ = std::span<geo::latlng const>{},
-                 .coordinate_ = get_coordinate(location_index),
-                 .offset_ = 0U,
-             };
-    }
-    return utl::get_or_create(cache, shape_index, [&] {
-      auto const shape = get_shape(*shape_, shape_index);
-      return shape_state{
-          .shape_ = shape,
-          .coordinate_ = shape[0],
-          .offset_ = 0U,
-      };
-    });
-  }
-
-  template <std::ranges::range Range>
-  inline shape_state get_to_state(Range const& shape,
-                                  n::location_idx_t const& location_index,
-                                  bool const is_last) const {
-    if (shape.size() < 2) {
-      return {
-          .coordinate_ = get_coordinate(location_index),
-          .offset_ = 0U,
-      };
-    }
-    if (is_last) {
-      // Number of segments == size - 1; keep last segment
-      return {
-          .coordinate_ = *(--shape.end()),
-          .offset_ = shape.size() - 2,
-      };
-    }
-    auto best =
-        geo::distance_to_polyline(get_coordinate(location_index), shape);
-    return {
-        .coordinate_ = best.best_,
-        .offset_ = best.segment_idx_,
-    };
-  }
-
   mm::msg_ptr create_response(std::vector<stop_pair> const& runs) const {
     geo::polyline_encoder<6> enc;
 
@@ -381,11 +299,9 @@ struct railviz::impl {
       return l;
     };
 
-    auto shape_cache = n::hash_map<n::shape_idx_t, shape_state>{};
     auto polyline_indices_cache = n::hash_map<
         std::tuple<n::location_idx_t, n::location_idx_t, n::shape_idx_t>,
         std::int64_t>{};
-    auto state = shape_state{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
@@ -397,25 +313,15 @@ struct railviz::impl {
       auto const from_l = add_station(from.get_location_idx());
       auto const to_l = add_station(to.get_location_idx());
 
-      auto const key = std::tuple{std::min(from_l, to_l),
-                                  std::max(from_l, to_l), r.shape_idx_};
-      auto const polyline_indices = std::vector<std::int64_t>{
-          utl::get_or_create(
-              polyline_indices_cache, key,
-              [&] {
-                auto& from =
-                    get_from_state(shape_cache, r.shape_idx_, from_l, state);
-                auto const sub_shape = std::ranges::subrange(
-                    from.shape_.begin() + from.offset_, from.shape_.end());
-                auto const to = get_to_state(sub_shape, to_l, r.last_);
-                encode_shape_segment(enc, sub_shape, from, to,
-                                     (std::get<0>(key) == from_l));
-                from.update(to);
-                fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
-                enc.reset();
-                return static_cast<std::int64_t>(fbs_polylines.size() - 1U);
-              }) *
-          (std::get<0>(key) != from_l ? -1 : 1)};
+      // FIXME nullptr check
+      auto const shape = fr.get_shape(*shape_, r.trip_idx_, n::interval{r.from_, r.to_});
+      auto const polyline_indices = std::vector<std::int64_t>{static_cast<std::int64_t>(fbs_polylines.size())};
+      for (auto const& p : shape) {
+        enc.push(p);
+      }
+      fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
+      enc.reset();
+
       return motis::railviz::CreateTrain(
           mc, mc.CreateVector(std::vector{mc.CreateString(fr.name())}),
           static_cast<int>(fr.get_clasz()),
