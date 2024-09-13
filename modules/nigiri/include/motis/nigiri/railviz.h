@@ -8,6 +8,7 @@
 #include "geo/box.h"
 #include "geo/latlng.h"
 
+#include "nigiri/shape.h"
 #include "nigiri/types.h"
 
 #include "motis/module/message.h"
@@ -19,12 +20,10 @@ struct rt_timetable;
 
 namespace motis::nigiri {
 
-using shape_data = std::unique_ptr<::nigiri::shapes_storage_t>;
-
 struct tag_lookup;
 
 struct railviz {
-  railviz(tag_lookup const&, ::nigiri::timetable const&, shape_data&&);
+  railviz(tag_lookup const&, ::nigiri::timetable const&, ::nigiri::shapes_storage&&);
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;
