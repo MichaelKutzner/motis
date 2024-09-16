@@ -451,7 +451,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
                 n::hash_map<n::bitfield, n::bitfield_idx_t>{};
             if (railviz_) {
               shapes_data = n::shapes_storage(shapes_dump_file_prefix,
-                                           cista::mmap::protection::WRITE);
+                                              cista::mmap::protection::WRITE);
             }
             for (auto const& [src, loader, dir] : datasets) {
               auto progress_tracker = utl::activate_progress_tracker(
@@ -506,7 +506,7 @@ void nigiri::import(motis::module::import_dispatcher& reg) {
               }
               if (railviz_) {
                 shapes_data = n::shapes_storage(shapes_dump_file_prefix,
-                                             cista::mmap::protection::READ);
+                                                cista::mmap::protection::READ);
               }
               loaded = true;
               break;

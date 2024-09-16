@@ -23,7 +23,8 @@ namespace motis::nigiri {
 struct tag_lookup;
 
 struct railviz {
-  railviz(tag_lookup const&, ::nigiri::timetable const&, ::nigiri::shapes_storage&&);
+  railviz(tag_lookup const&, ::nigiri::timetable const&,
+          ::nigiri::shapes_storage&&);
   ~railviz();
 
   module::msg_ptr get_trains(module::msg_ptr const&) const;
