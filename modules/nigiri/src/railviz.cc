@@ -177,16 +177,6 @@ struct rt_transport_geo_index {
   rt_rtree rtree_{};
 };
 
-struct shape_state {
-  void update(shape_state const& other) {
-    coordinate_ = other.coordinate_;
-    offset_ += other.offset_;
-  }
-  std::span<geo::latlng const> shape_{};
-  geo::latlng coordinate_;
-  std::size_t offset_;
-};
-
 struct railviz::impl {
   impl(tag_lookup const& tags, n::timetable const& tt, n::shapes_storage&& shapes_data)
       : tags_{tags}, tt_{tt}, shapes_data_{std::move(shapes_data)} {
@@ -310,9 +300,6 @@ struct railviz::impl {
       return l;
     };
 
-    auto polyline_indices_cache = n::hash_map<
-        std::tuple<n::location_idx_t, n::location_idx_t, n::shape_idx_t>,
-        std::int64_t>{};
     auto fbs_polylines = std::vector<fbs::Offset<fbs::String>>{
         mc.CreateString("") /* no zero, zero doesn't have a sign=direction */};
     auto const trains = utl::to_vec(runs, [&](stop_pair const& r) {
