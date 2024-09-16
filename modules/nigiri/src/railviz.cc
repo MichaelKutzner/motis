@@ -11,7 +11,6 @@
 
 #include "geo/detail/register_box.h"
 #include "geo/latlng.h"
-#include "geo/polyline.h"
 #include "geo/polyline_format.h"
 
 #include "nigiri/common/linear_lower_bound.h"
@@ -49,7 +48,6 @@ namespace motis::nigiri {
 struct stop_pair {
   n::rt::run r_;
   n::stop_idx_t from_{}, to_{};
-  bool last_{false};
 };
 
 int min_zoom_level(n::clasz const clasz, float const distance) {
@@ -202,18 +200,14 @@ struct railviz::impl {
       }
 
       auto const fr = n::rt::frun{tt_, rtt_.get(), r};
-      stop_pair* last = nullptr;
       for (auto const [from, to] : utl::pairwise(fr)) {
-        last = &runs.emplace_back(stop_pair{
+        runs.emplace_back(stop_pair{
             .r_ = r,
             .from_ = static_cast<n::stop_idx_t>(from.stop_idx_ -
                                                 fr.stop_range_.from_),
             .to_ =
                 static_cast<n::stop_idx_t>(to.stop_idx_ - fr.stop_range_.from_),
         });
-      }
-      if (last != nullptr) {
-        last->last_ = true;
       }
     }
     return create_response(runs);

@@ -2,11 +2,7 @@
 
 #include <memory>
 
-#include "cista/containers/mmap_vec.h"
-#include "cista/mmap.h"
-
 #include "geo/box.h"
-#include "geo/latlng.h"
 
 #include "nigiri/shape.h"
 #include "nigiri/types.h"
