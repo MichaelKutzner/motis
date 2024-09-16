@@ -21,7 +21,7 @@
 [fmt]
   url=git@github.com:motis-project/fmt.git
   branch=master
-  commit=edb385ac526c24bc917ec4a41bb0edb28f0ca59e
+  commit=dc10f83be70ac2873d5f8d1ce317596f1fd318a2
 [geo]
   url=git@github.com:motis-project/geo.git
   branch=master
@@ -49,7 +49,7 @@
 [ppr]
   url=git@github.com:motis-project/ppr.git
   branch=master
-  commit=217585f424f6865693dd4aaa1a16f85daa574863
+  commit=512cfefe0fe7c7a64ef0adefbf7af2adfe5200c4
 [rapidjson]
   url=git@github.com:motis-project/rapidjson.git
   branch=master
@@ -69,7 +69,7 @@
 [boost]
   url=git@github.com:motis-project/boost.git
   branch=master
-  commit=1c3f21c1fa8b149da89e2f6bcb48b28fff30fa5e
+  commit=60cae66449fa3c9599b2b7d3d5d44c65301ed3a3
 [mimalloc]
   url=git@github.com:motis-project/mimalloc.git
   branch=master
@@ -81,8 +81,16 @@
 [osr]
   url=git@github.com:motis-project/osr.git
   branch=master
-  commit=ef958750e251bf0204b61a77e1c4d941b3c41f05
+  commit=26a6933ba7b61aa93d18ff9d3aea3ed743d69ce5
 [adr]
   url=git@github.com:triptix-tech/adr.git
   branch=master
   commit=bef3f11a8c1642939e7047bcebf3d2f3528b23a3
+[prometheus-cpp]
+  url=git@github.com:motis-project/prometheus-cpp.git
+  branch=master
+  commit=e420cd7cf3995a994220b40a36c987ac8e67c0bf
+[opentelemetry-cpp]
+  url=git@github.com:motis-project/opentelemetry-cpp.git
+  branch=main
+  commit=ec4aef6b17b697052edef5417825ad71947b2ed1
