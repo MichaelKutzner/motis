@@ -296,10 +296,19 @@ struct railviz::impl {
 
       auto const polyline_indices = std::vector<std::int64_t>{
           static_cast<std::int64_t>(fbs_polylines.size())};
+      auto insert_count = 0U;
+      auto last_inserted = geo::latlng{};
       fr.for_each_shape_point(
           shapes_data_.get(),
           n::interval{r.from_, static_cast<n::stop_idx_t>(r.to_ + 1)},
-          [&enc](geo::latlng const& point) { enc.push(point); });
+          [&](geo::latlng const& point) {
+            enc.push(last_inserted = point);
+            ++insert_count;
+          });
+      while (insert_count < 2U) {
+        enc.push(last_inserted);
+        ++insert_count;
+      }
       fbs_polylines.emplace_back(mc.CreateString(enc.buf_));
       enc.reset();
 
