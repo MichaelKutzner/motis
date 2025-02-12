@@ -17,6 +17,7 @@
 #include "motis/endpoints/elevators.h"
 #include "motis/endpoints/footpaths.h"
 #include "motis/endpoints/graph.h"
+#include "motis/endpoints/heartbeat.h"
 #include "motis/endpoints/initial.h"
 #include "motis/endpoints/levels.h"
 #include "motis/endpoints/map/stops.h"
@@ -30,6 +31,7 @@
 #include "motis/endpoints/tiles.h"
 #include "motis/endpoints/trip.h"
 #include "motis/endpoints/update_elevator.h"
+#include "motis/endpoints/version.h"
 #include "motis/gbfs/update.h"
 #include "motis/rt_update.h"
 #include "motis/scheduler/runner.h"
@@ -79,6 +81,8 @@ int server(data d, config const& c) {
   GET<ep::trips>(qr, "/api/v1/map/trips", d);
   GET<ep::stops>(qr, "/api/v1/map/stops", d);
   GET<ep::one_to_many>(qr, "/api/v1/one-to-many", d);
+  GET<ep::heartbeat>(qr, "/heartbeat", d);
+  GET<ep::version>(qr, "/version", d);
 
   if (c.tiles_) {
     utl::verify(d.tiles_ != nullptr, "tiles data not loaded");
