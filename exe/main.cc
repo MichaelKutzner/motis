@@ -11,12 +11,9 @@
 #include "motis/data.h"
 #include "motis/import.h"
 #include "motis/server.h"
+#include "motis/version.h"
 
 #include "./flags.h"
-
-#if !defined(MOTIS_VERSION)
-#define MOTIS_VERSION "unknown"
-#endif
 
 namespace po = boost::program_options;
 using namespace std::string_view_literals;
@@ -44,10 +41,10 @@ int main(int ac, char** av) {
         "  config     generate a config file from a list of input files\n"
         "  import     prepare input data, creates the data directory\n"
         "  server     starts a web server serving the API\n",
-        MOTIS_VERSION);
+        motis_version);
     return 0;
   } else if (ac <= 1 || (ac >= 2 && av[1] == "--version"sv)) {
-    fmt::println("{}", MOTIS_VERSION);
+    fmt::println("{}", motis_version);
     return 0;
   }
 
