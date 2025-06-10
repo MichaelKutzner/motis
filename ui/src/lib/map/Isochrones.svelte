@@ -1,7 +1,7 @@
 <script lang="ts">
 	import bbox from '@turf/bbox';
 	import circle from '@turf/circle';
-	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+	import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 
 	export interface IsochronesPos {
@@ -76,6 +76,7 @@
 		return [x, y];
 	}
 
+	let boxes = $state<maplibregl.LngLatBounds[] | undefined>(undefined);
 	let circles = $state<CircleType[] | undefined>(undefined);
 	$effect(() => {
 		if (
@@ -84,6 +85,19 @@
 		) {
 			return;
 		}
+		boxes = isochronesData.map((data) => {
+			const r = reachableKilometers(data);
+			// Compare geo::includes/geo/box.h
+			const d_lat = r / 111.0;
+			const min_lat_rad = data.lat * Math.PI / 180;
+			const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
+			const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
+			return LngLatBounds.convert([
+				[data.lng - d_lng, data.lat - d_lat],
+				[data.lng + d_lng, data.lat + d_lat],
+			]);
+		});
+		return;
 		circles = isochronesData.map((data) => {
 			const r = reachableKilometers(data);
 			let c = circle([data.lng, data.lat], r, {
@@ -112,7 +126,7 @@
 	}
 
 	$effect(() => {
-		if (!map || !circles) {
+		if (!map || !boxes) {
 			return;
 		}
 		if (!loaded) {
@@ -153,6 +167,20 @@
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
+		boxes?.forEach((b) => {
+			ctx.save(); // Store canvas state
+
+			const min = transform([b._sw.lng, b._sw.lat], dimensions);
+			const max = transform([b._ne.lng, b._ne.lat], dimensions);
+			const diff_x = max[0] - min[0];
+			const diff_y = max[1] - min[1];
+			ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+			// Restore previous state on top
+			ctx.restore();
+		});
+		return;
+
+		/*
 		circles.filter(is_visible).forEach((c) => {
 			ctx.save(); // Store canvas state
 
@@ -184,6 +212,7 @@
 			// Restore previous state on top
 			ctx.restore();
 		});
+		*/
 	});
 </script>
 
