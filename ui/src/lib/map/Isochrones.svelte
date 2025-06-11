@@ -3,6 +3,7 @@
 	import circle from '@turf/circle';
 	import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
+	import WebWorker from '$lib/map/isochrones.ts?worker';
 
 	export interface IsochronesPos {
 		lat: number;
@@ -76,8 +77,36 @@
 		return [x, y];
 	}
 
+	let worker: Worker | undefined = undefined;
+
+	$effect(() => {
+		if (
+			!active ||
+			(lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)
+		) {
+			return;
+		}
+
+		if (worker !== undefined) {
+			worker.terminate();
+		}
+		console.log('Starting worker');
+		//worker = new Worker(workerURL);
+		worker = new WebWorker();
+		worker.postMessage([$state.snapshot(isochronesData), $state.snapshot(maxAllTime), $state.snapshot(streetModes), $state.snapshot(wheelchair), 1]);
+		worker.onmessage = (event) => {
+			console.log('Got response');
+			const [resultType, data, idx] = event.data;
+			console.log('Type:', resultType);
+			boxes = data;
+			worker?.terminate();
+			worker = undefined;
+		};
+	});
+
 	let boxes = $state<maplibregl.LngLatBounds[] | undefined>(undefined);
 	let circles = $state<CircleType[] | undefined>(undefined);
+	/*
 	$effect(() => {
 		if (
 			!active ||
@@ -111,6 +140,7 @@
 		lastAllTime = maxAllTime;
 		lastSpeed = kilometersPerSecond;
 	});
+	*/
 
 	function is_visible(circle: CircleType) {
 		if (!circle.bbox) {
