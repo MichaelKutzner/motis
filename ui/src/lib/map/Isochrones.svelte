@@ -3,6 +3,7 @@
 	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
+	import RenderWorker from '$lib/map/isochronesRenderer.ts?worker';
 
 	export interface IsochronesPos {
 		lat: number;
@@ -75,6 +76,7 @@
 	}
 
 	let worker: Worker | undefined = undefined;
+	let renderWorker: Worker | undefined = undefined;
 
 	$effect(() => {
 		if (
@@ -120,19 +122,6 @@
 	let boxes = $state<maplibregl.LngLatBounds[] | undefined>(undefined);
 	let circles = $state<CircleType[] | undefined>(undefined);
 
-	function is_visible(circle: CircleType) {
-		if (!circle.bbox) {
-			return false;
-		}
-		const b = circle.bbox; // [minX, minY, maxX, maxY]
-		return (
-			boundingBox._sw.lat <= b[3] &&
-			b[1] <= boundingBox._ne.lat &&
-			boundingBox._sw.lng <= b[2] &&
-			b[0] <= boundingBox._ne.lat
-		);
-	}
-
 	$effect(() => {
 		if (!map) {
 			return;
@@ -154,6 +143,7 @@
 			canvasLoaded = true;
 		}
 
+		console.log('Starting worker 2');
 		if (!active || !(boxes || circles)) {
 			map.setLayoutProperty(name, 'visibility', 'none');
 			return;
@@ -174,12 +164,13 @@
 		if (!ctx) {
 			return;
 		}
-		ctx.fillStyle = color;
-		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
 		if (circles) {
 			drawCircles(ctx, circles, dimensions);
 		} else if (boxes) {
+			ctx.fillStyle = color;
+			ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
+
 			drawBoxes(ctx, boxes, dimensions);
 		}
 	});
@@ -199,37 +190,30 @@
 	}
 
 	function drawCircles(ctx: CanvasRenderingContext2D, circles: CircleType[], dimensions: number[]) {
-		circles.filter(is_visible).forEach((c) => {
-			ctx.save(); // Store canvas state
+		let newCanvas = document.createElement('canvas');
+		newCanvas.width = dimensions[0];
+		newCanvas.height = dimensions[1];
+		let canvas = newCanvas.transferControlToOffscreen();
 
-			const b = c.bbox!; // Existence checked in filter()
-			const min = transform([b[0], b[1]], dimensions);
-			const max = transform([b[2], b[3]], dimensions);
-			const diff_x = max[0] - min[0];
-			const diff_y = max[1] - min[1];
-
-			if (diff_x < 2 && diff_y < 2) {
-				// Draw small rect
-				ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
-			} else {
-				// Clip circle
-				ctx.beginPath();
-				const coords = c.geometry.coordinates[0];
-				const start = transform(coords[0], dimensions);
-				ctx.moveTo(start[0], start[1]);
-				for (let i = 0; i < coords.length; ++i) {
-					const pos = transform(coords[i], dimensions);
-					ctx.lineTo(pos[0], pos[1]);
-				}
-				ctx.clip();
-
-				// Fill map, clipped to circle
-				ctx.fillRect(0, 0, dimensions[0], dimensions[1]);
+		if (renderWorker !== undefined) {
+			renderWorker.terminate();
+		}
+		renderWorker = new RenderWorker();
+		renderWorker.onmessage = (event) => {
+		console.log('GOT UPDATE');
+			const done = event.data;
+			ctx.drawImage(newCanvas, 0, 0);
+			if (done) {
+				renderWorker?.terminate();
+				renderWorker = undefined;
 			}
-
-			// Restore previous state on top
-			ctx.restore();
-		});
+		};
+		renderWorker.postMessage({
+			boundingBox: $state.snapshot(boundingBox),
+			canvas: canvas,
+			dimensions: dimensions,
+			items: $state.snapshot(circles),
+		}, [canvas]);
 	}
 </script>
 
