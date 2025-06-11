@@ -1,3 +1,5 @@
+import bbox from '@turf/bbox';
+import circle from '@turf/circle';
 import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 import type { PrePostDirectMode } from '$lib/Modes';
 
@@ -14,9 +16,9 @@ self.onmessage = function(event) {
 	const maxDistance = getMaxDistanceFunction(maxDuration, streetModes, wheelchair);
 	const rects = calculateRects(isochronesData, maxDistance);
 	self.postMessage(['rects', rects, idx]);
-	/*
-	const allCircles = TODO;
+	const allCircles = calculateCircles(isochronesData, maxDistance);
 	self.postMessage(['circles', allCircles, idx]);
+	/*
 	const visibleCircles = TODO;
 	self.postMessage(['circles', visibleCircles, idx]);
 	const polygons = TODO;
@@ -47,5 +49,17 @@ function calculateRects(isochrones: IsochronesPos[], maxDistance: (pos: Isochron
 			[data.lng - d_lng, data.lat - d_lat],
 			[data.lng + d_lng, data.lat + d_lat],
 		]);
+	});
+}
+
+function calculateCircles(isochrones: IsochronesPos[], maxDistance: (pos: IsochronesPos) => number) {
+	return isochrones.map((data) => {
+		const r = maxDistance(data);
+		let c = circle([data.lng, data.lat], r, {
+			// steps: 64,
+			units: 'kilometers'
+		});
+		c.bbox = bbox(c);
+		return c;
 	});
 }

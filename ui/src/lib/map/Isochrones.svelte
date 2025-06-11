@@ -1,7 +1,6 @@
 <script lang="ts">
-	import bbox from '@turf/bbox';
 	import circle from '@turf/circle';
-	import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
 
@@ -37,7 +36,7 @@
 	} = $props();
 
 	const name = 'isochrones-data';
-	let loaded = false;
+	let canvasLoaded = false;
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -64,9 +63,7 @@
 		[boundingBox._ne.lng, boundingBox._sw.lat],
 		[boundingBox._sw.lng, boundingBox._sw.lat]
 	]);
-	function reachableKilometers(pos: IsochronesPos) {
-		return Math.min(pos.seconds, maxAllTime) * kilometersPerSecond;
-	}
+
 	function transform(pos: number[], dimensions: number[]) {
 		const x = Math.round(
 			((pos[0] - boundingBox._sw.lng) / (boundingBox._ne.lng - boundingBox._sw.lng)) * dimensions[0]
@@ -91,56 +88,37 @@
 			worker.terminate();
 		}
 		console.log('Starting worker');
-		//worker = new Worker(workerURL);
 		worker = new WebWorker();
 		worker.postMessage([$state.snapshot(isochronesData), $state.snapshot(maxAllTime), $state.snapshot(streetModes), $state.snapshot(wheelchair), 1]);
 		worker.onmessage = (event) => {
 			console.log('Got response');
 			const [resultType, data, idx] = event.data;
 			console.log('Type:', resultType);
-			boxes = data;
-			worker?.terminate();
-			worker = undefined;
+			if (resultType == 'rects') {
+				unsetAll();
+				boxes = data;
+			} else if (resultType == 'circles') {
+				unsetAll();
+				circles = data;
+			} else if (resultType == 'polygons') {
+				unsetAll();
+				// polygons = data;
+				worker?.terminate();
+				worker = undefined;
+			} else {
+				console.log(`Unknown type '${resultType}'`);
+			}
 		};
 	});
 
+	function unsetAll() {
+				boxes = undefined;
+				circles = undefined;
+				// polygons = undefined;
+	}
+
 	let boxes = $state<maplibregl.LngLatBounds[] | undefined>(undefined);
 	let circles = $state<CircleType[] | undefined>(undefined);
-	/*
-	$effect(() => {
-		if (
-			!active ||
-			(lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)
-		) {
-			return;
-		}
-		boxes = isochronesData.map((data) => {
-			const r = reachableKilometers(data);
-			// Compare geo::includes/geo/box.h
-			const d_lat = r / 111.0;
-			const min_lat_rad = data.lat * Math.PI / 180;
-			const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
-			const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
-			return LngLatBounds.convert([
-				[data.lng - d_lng, data.lat - d_lat],
-				[data.lng + d_lng, data.lat + d_lat],
-			]);
-		});
-		return;
-		circles = isochronesData.map((data) => {
-			const r = reachableKilometers(data);
-			let c = circle([data.lng, data.lat], r, {
-				// steps: 64,
-				units: 'kilometers'
-			});
-			c.bbox = bbox(c);
-			return c;
-		});
-		lastData = isochronesData;
-		lastAllTime = maxAllTime;
-		lastSpeed = kilometersPerSecond;
-	});
-	*/
 
 	function is_visible(circle: CircleType) {
 		if (!circle.bbox) {
@@ -156,10 +134,10 @@
 	}
 
 	$effect(() => {
-		if (!map || !boxes) {
+		if (!map) {
 			return;
 		}
-		if (!loaded) {
+		if (!canvasLoaded) {
 			map.addSource(name, {
 				type: 'canvas',
 				canvas: 'isochronesCanvas',
@@ -173,13 +151,15 @@
 					'raster-opacity': opacity / 1000
 				}
 			});
-			loaded = true;
+			canvasLoaded = true;
 		}
 
-		map.setLayoutProperty(name, 'visibility', active ? 'visible' : 'none');
-		if (!active) {
+		if (!active || !(boxes || circles)) {
+			map.setLayoutProperty(name, 'visibility', 'none');
 			return;
 		}
+
+		map.setLayoutProperty(name, 'visibility', 'visible');
 		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
 
 		const dimensions = map._containerDimensions();
@@ -197,7 +177,15 @@
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		boxes?.forEach((b) => {
+		if (circles) {
+			drawCircles(ctx, circles, dimensions);
+		} else if (boxes) {
+			drawBoxes(ctx, boxes, dimensions);
+		}
+	});
+
+	function drawBoxes(ctx: CanvasRenderingContext2D, boxes: maplibregl.LngLatBounds[], dimensions: number[]) {
+		boxes.forEach((b) => {
 			ctx.save(); // Store canvas state
 
 			const min = transform([b._sw.lng, b._sw.lat], dimensions);
@@ -208,9 +196,9 @@
 			// Restore previous state on top
 			ctx.restore();
 		});
-		return;
+	}
 
-		/*
+	function drawCircles(ctx: CanvasRenderingContext2D, circles: CircleType[], dimensions: number[]) {
 		circles.filter(is_visible).forEach((c) => {
 			ctx.save(); // Store canvas state
 
@@ -242,8 +230,7 @@
 			// Restore previous state on top
 			ctx.restore();
 		});
-		*/
-	});
+	}
 </script>
 
 <canvas id="isochronesCanvas">Canvas not supported</canvas>
