@@ -120,62 +120,6 @@ function calculateCircles(isochrones: IsochronesPos[], maxDistance: (pos: Isochr
 	});
 }
 
-/*
-function createCircleWorkerURL(circles: CircleType[]) {
-	const work = (event: any) => {
-		console.log("WORK INVOKED");
-
-		const boundingBox = event.data.boundingBox;
-		const canvas = event.data.canvas;
-		const dimensions = event.data.dimensions;
-
-		console.log("DEBUG 1111");
-
-		let ctx = canvas.getContext("2d");
-		console.log("DEBUG 2222");
-
-		const transform = getTransformer(boundingBox, dimensions);
-		console.log("DEBUG 4444");
-		const isVisible = getIsVisible(boundingBox);
-		console.log("DEBUG 3333");
-
-		console.log("CIRCLES:", circles.length);
-
-		drawCircles(ctx, circles, transform, isVisible, dimensions);
-	};
-	// const data = "const circles = " + circles.toString() + ";\n\n" + "onmessage=" + work.toString() + ";\n\n" + getTransformer.toString() + "\n" + getIsVisible.toString();
-	const data = "const circles = " + circles.map((c) => c.toString()).toString() + ";\n\n" + "onmessage=" + work.toString();
-	// console.log("DATA:", data);
-	// const obj = {
-	// 	const o_circles = circles;
-
-	// 	onmessage = (event: any) => {
-	// 	console.log("WORK INVOKED");
-
-	// 	const boundingBox = event.data.boundingBox;
-	// 	const canvas = event.data.canvas;
-	// 	const dimensions = event.data.dimensions;
-
-	// 	console.log("DEBUG 1111");
-
-	// 	let ctx = canvas.getContext("2d");
-	// 	console.log("DEBUG 2222");
-
-	// 	const transform = getTransformer(boundingBox, dimensions);
-	// 	console.log("DEBUG 4444");
-	// 	const isVisible = getIsVisible(boundingBox);
-	// 	console.log("DEBUG 3333");
-
-	// 	console.log("CIRCLES:", circles.length);
-
-	// 	drawCircles(ctx, circles, transform, isVisible, dimensions);
-	// };
-	// };
-	let b = new Blob([data], { type: "text/javascript" });
-	return URL.createObjectURL(b);
-}
-*/
-
 function getTransformer(boundingBox: LngLatBounds, dimensions: number[]) {
 		console.log("DEBUG 5555");
 	return (pos: number[]) => {
@@ -204,7 +148,6 @@ function getIsVisible(boundingBox: LngLatBounds) {
 	}
 }
 
-// function drawCircles(ctx: CanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
 function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
 	ctx.fillStyle = 'magenta';
 	ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
