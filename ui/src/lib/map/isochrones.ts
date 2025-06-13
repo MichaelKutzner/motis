@@ -53,8 +53,9 @@ self.onmessage = function(event) {
 		if (!canvas) {
 			return;
 		}
-		// const canvas = event.data.canvas;
+		const color = event.data.color;
 		const dimensions = event.data.dimensions;
+		console.log('Dims:', dimensions);
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
 		let ctx = canvas.getContext("2d");
@@ -64,21 +65,15 @@ self.onmessage = function(event) {
 
 		const transform = getTransformer(boundingBox, dimensions);
 
+		ctx.fillStyle = color;
+		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
+
 		if (circles) {
 			const isVisible = getIsVisible(boundingBox);
 			drawCircles(ctx, circles, transform, isVisible, dimensions);
 		} else if (boxes) {
 			drawRects(ctx, boxes, transform);
 		}
-
-		/*
-		console.log('BEFORE');
-		self.postMessage({
-			method: 'canvasUpdated',
-			canvas: canvas,
-		});
-		console.log('AFTER');
-		*/
 	}
 }
 
@@ -149,9 +144,6 @@ function getIsVisible(boundingBox: LngLatBounds) {
 }
 
 function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
-	ctx.fillStyle = 'magenta';
-	ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
-
 	circles.filter(is_visible).forEach((c) => {
 		ctx.save(); // Store canvas state
 

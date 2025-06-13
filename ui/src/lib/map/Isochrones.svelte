@@ -1,9 +1,7 @@
 <script lang="ts">
-	import circle from '@turf/circle';
 	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
-	import { untrack } from 'svelte';
 
 	export interface IsochronesPos {
 		lat: number;
@@ -12,7 +10,6 @@
 	}
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
-	type CircleType = ReturnType<typeof circle>;
 
 	let {
 		map,
@@ -37,9 +34,9 @@
 	} = $props();
 
 	const name = 'isochrones-data';
-	let canvas: HTMLCanvasElement | undefined = undefined;
-	let canvasLoaded = false;
-	// let viewport = $state<number[] | undefined>(undefined);
+	let canvas = $state<HTMLCanvasElement | undefined>(undefined);
+	let viewport: number[] | undefined = undefined;
+	let canvasSource: CanvasSource | undefined = undefined;
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -67,16 +64,6 @@
 		[boundingBox._sw.lng, boundingBox._sw.lat]
 	]);
 
-	function transform(pos: number[], dimensions: number[]) {
-		const x = Math.round(
-			((pos[0] - boundingBox._sw.lng) / (boundingBox._ne.lng - boundingBox._sw.lng)) * dimensions[0]
-		);
-		const y = Math.round(
-			((boundingBox._ne.lat - pos[1]) / (boundingBox._ne.lat - boundingBox._sw.lat)) * dimensions[1]
-		);
-		return [x, y];
-	}
-
 	let worker: Worker | undefined = undefined;
 
 	$effect(() => {
@@ -93,7 +80,6 @@
 			canvas = document.createElement('canvas');
 			let renderCanvas = canvas.transferControlToOffscreen();
 
-console.log('canvas init');
 			worker.postMessage({
 				method: 'init',
 				canvas: renderCanvas,
@@ -105,8 +91,6 @@ console.log('canvas init');
 				console.log('Method:', method);
 				if (method == 'canvasUpdated') {
 					console.log('TODO DELETE');
-					// const canvas = event.data.canvas;
-					// redrawCanvas(canvas);
 				} else if (method == 'dataUpdated') {
 					requestCanvasUpdate();
 				} else {
@@ -131,15 +115,11 @@ console.log('canvas init');
 		});
 	}
 
-	// $effect(() => {
-	const viewport = $derived.by(() => {
-console.log('TRIGGER 111');
+	$effect(() => {
 		if (!map || !canvas) {
-		console.log('no canvas');
-			return undefined;
+			return;
 		}
-console.log('TRIGGER 222');
-		if (!canvasLoaded) {
+		if (!canvasSource) {
 			map.addSource(name, {
 				type: 'canvas',
 				canvas: canvas,
@@ -153,54 +133,37 @@ console.log('TRIGGER 222');
 					'raster-opacity': opacity / 1000
 				}
 			});
-			canvasLoaded = true;
+			canvasSource = map.getSource(name);
+			if (!canvasSource) {
+				return;
+			}
 		}
-console.log('TRIGGER 333');
 
 		if (!active) {
-			untrack(() => {
 			map.setLayoutProperty(name, 'visibility', 'none');
-			});
-			return undefined;
-		}
-console.log('TRIGGER 444');
-
-		const op = opacity / 1000;
-		untrack(() => {
-		map.setLayoutProperty(name, 'visibility', 'visible');
-		map.setPaintProperty(name, 'raster-opacity', op);
-		// map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
-		});
-
-		// viewport = map._containerDimensions();
-
-		const coords = boxCoords;
-		untrack(() => {
-			const source = map.getSource(name) as CanvasSource;
-			source.setCoordinates(coords);
-		});
-
-		// requestCanvasUpdate();
-
-		return map._containerDimensions();
-	});
-
-	$effect(() => {
-		requestCanvasUpdate();
-	})
-
-	function requestCanvasUpdate() {
-		if (!worker || !viewport) {
-		console.log('missing viewport');
 			return;
 		}
 
-		untrack(() => {
-		worker!.postMessage({
+		map.setLayoutProperty(name, 'visibility', 'visible');
+		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
+
+		viewport = map._containerDimensions();
+
+		canvasSource.setCoordinates(boxCoords);
+
+		requestCanvasUpdate();
+	});
+
+	function requestCanvasUpdate() {
+		if (!worker || !viewport) {
+			return;
+		}
+
+		worker.postMessage({
 			method: 'render',
 			boundingBox: $state.snapshot(boundingBox),
-			dimensions: $state.snapshot(viewport),
-		});
+			dimensions: viewport,
+			color: color,
 		});
 	}
 
