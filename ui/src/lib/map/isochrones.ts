@@ -1,7 +1,6 @@
 import bbox from '@turf/bbox';
 import circle from '@turf/circle';
 import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
-import type { PrePostDirectMode } from '$lib/Modes';
 
 let canvas: OffscreenCanvas | undefined = undefined;
 
@@ -23,11 +22,10 @@ self.onmessage = function(event) {
 	} else if (method == 'update') {
 		const isochronesData = event.data.data;
 		const maxDuration = event.data.maxDuration;
-		const streetModes = event.data.streetModes;
-		const wheelchair = event.data.wheelchair;
+		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const idx = event.data.idx;
 		//const speed = getSpeed(streetModes, wheelchair);  //calculate_constants(maxAllTime, streetModes, wheelchair);
-		const maxDistance = getMaxDistanceFunction(maxDuration, streetModes, wheelchair);
+		const maxDistance = getMaxDistanceFunction(maxDuration, kilometersPerSecond);
 		const rects = calculateRects(isochronesData, maxDistance);
 		boxes = rects;
 		circles = undefined;
@@ -77,14 +75,7 @@ self.onmessage = function(event) {
 	}
 }
 
-function getMaxDistanceFunction(maxDuration: number, streetModes: PrePostDirectMode[], wheelchair: boolean) {
-	const kilometersPerSecond =
-		streetModes.includes('BIKE')
-			? 0.0038 // 3.8 meters per second
-			: wheelchair
-				? 0.0008 // 0.8 meters per second
-				: 0.0012 // 1.2 meters per second
-	;
+function getMaxDistanceFunction(maxDuration: number, kilometersPerSecond: number) {
 	return (pos: IsochronesPos) => Math.min(pos.seconds, maxDuration) * kilometersPerSecond;
 }
 
@@ -116,7 +107,6 @@ function calculateCircles(isochrones: IsochronesPos[], maxDistance: (pos: Isochr
 }
 
 function getTransformer(boundingBox: LngLatBounds, dimensions: number[]) {
-		console.log("DEBUG 5555");
 	return (pos: number[]) => {
 		const x = Math.round(
 			((pos[0] - boundingBox._sw.lng) / (boundingBox._ne.lng - boundingBox._sw.lng)) * dimensions[0]

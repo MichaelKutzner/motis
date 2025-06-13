@@ -78,8 +78,7 @@
 			method: 'update',
 			data: $state.snapshot(isochronesData),
 			maxDuration: $state.snapshot(maxAllTime),
-			streetModes: $state.snapshot(streetModes),
-			wheelchair: $state.snapshot(wheelchair),
+			kilometersPerSecond: $state.snapshot(kilometersPerSecond),
 			idx: 1,
 		});
 
@@ -105,7 +104,6 @@
 	$effect(() => requestCanvasUpdate());
 
 	function requestCanvasUpdate() {
-		console.log('UPDATE');
 		if (!map || !active) {
 			return;
 		}
@@ -148,7 +146,6 @@
 
 	function setupWorker() {
 		if (worker === undefined) {
-			console.log('Starting worker');
 			worker = new WebWorker();
 			canvas = document.createElement('canvas');
 			let renderCanvas = canvas.transferControlToOffscreen();
