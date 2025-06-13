@@ -2,6 +2,7 @@ import circle from '@turf/circle';
 import { type LngLatBounds } from 'maplibre-gl';
 
 self.onmessage = function(event) {
+	return;
 	const boundingBox = event.data.boundingBox;
 	const canvas = event.data.canvas;
 	const dimensions = event.data.dimensions;
@@ -13,6 +14,7 @@ self.onmessage = function(event) {
 	const isVisible = getIsVisible(boundingBox);
 
 	drawCircles(ctx, items, transform, isVisible, dimensions);
+	// drawCircles(canvas, items, transform, isVisible, dimensions);
 }
 
 type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
