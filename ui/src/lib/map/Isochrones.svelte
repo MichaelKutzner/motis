@@ -34,9 +34,8 @@
 	} = $props();
 
 	const name = 'isochrones-data';
-	let canvas = $state<HTMLCanvasElement | undefined>(undefined);
-	let viewport: number[] | undefined = undefined;
-	let canvasSource: CanvasSource | undefined = undefined;
+	let canvas: HTMLCanvasElement | undefined = undefined;
+	let canvasSource = $state<CanvasSource | undefined>(undefined);
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -74,6 +73,80 @@
 			return;
 		}
 
+		const worker = setupWorker();
+		worker.postMessage({
+			method: 'update',
+			data: $state.snapshot(isochronesData),
+			maxDuration: $state.snapshot(maxAllTime),
+			streetModes: $state.snapshot(streetModes),
+			wheelchair: $state.snapshot(wheelchair),
+			idx: 1,
+		});
+
+		lastData = isochronesData;
+		lastAllTime = maxAllTime;
+		lastSpeed = kilometersPerSecond;
+	});
+
+	$effect(() => {
+		if (!map || !canvasSource) {
+			return;
+		}
+		map.setLayoutProperty(name, 'visibility', active ? 'visible' : 'none');
+	});
+
+	$effect(() => {
+		if (!map || !canvasSource) {
+			return;
+		}
+		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
+	});
+
+	$effect(() => requestCanvasUpdate());
+
+	function requestCanvasUpdate() {
+		console.log('UPDATE');
+		if (!map || !active) {
+			return;
+		}
+		if (!canvasSource) {
+			canvasSource = setupLayers(map);
+			if (!canvasSource) {
+				return;
+			}
+		} else {
+			canvasSource.setCoordinates(boxCoords);
+		}
+		const worker = setupWorker();
+
+		const viewport = map._containerDimensions();
+
+		worker.postMessage({
+			method: 'render',
+			boundingBox: $state.snapshot(boundingBox),
+			dimensions: viewport,
+			color: color,
+		});
+	}
+
+	function setupLayers(map: Map) {
+		map.addSource(name, {
+			type: 'canvas',
+			canvas: canvas,
+			coordinates: boxCoords,
+		});
+		map.addLayer({
+			id: name,
+			type: 'raster',
+			source: name,
+			paint: {
+				'raster-opacity': opacity / 1000
+			}
+		});
+		return map.getSource(name) as CanvasSource;
+	}
+
+	function setupWorker() {
 		if (worker === undefined) {
 			console.log('Starting worker');
 			worker = new WebWorker();
@@ -86,85 +159,15 @@
 			}, [renderCanvas]);
 
 			worker.onmessage = (event) => {
-				console.log('Got response');
 				const method = event.data.method;
-				console.log('Method:', method);
-				if (method == 'canvasUpdated') {
-					console.log('TODO DELETE');
-				} else if (method == 'dataUpdated') {
+				if (method == 'dataUpdated') {
 					requestCanvasUpdate();
 				} else {
 					console.log(`Unknown method '${method}'`);
 				}
 			};
 		}
-		requestIsochronesCalculation();
-	});
-
-	function requestIsochronesCalculation() {
-		if (!worker) {
-			return;
-		}
-		worker.postMessage({
-			method: 'update',
-			data: $state.snapshot(isochronesData),
-			maxDuration: $state.snapshot(maxAllTime),
-			streetModes: $state.snapshot(streetModes),
-			wheelchair: $state.snapshot(wheelchair),
-			idx: 1,
-		});
-	}
-
-	$effect(() => {
-		if (!map || !canvas) {
-			return;
-		}
-		if (!canvasSource) {
-			map.addSource(name, {
-				type: 'canvas',
-				canvas: canvas,
-				coordinates: boxCoords
-			});
-			map.addLayer({
-				id: name,
-				type: 'raster',
-				source: name,
-				paint: {
-					'raster-opacity': opacity / 1000
-				}
-			});
-			canvasSource = map.getSource(name);
-			if (!canvasSource) {
-				return;
-			}
-		}
-
-		if (!active) {
-			map.setLayoutProperty(name, 'visibility', 'none');
-			return;
-		}
-
-		map.setLayoutProperty(name, 'visibility', 'visible');
-		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
-
-		viewport = map._containerDimensions();
-
-		canvasSource.setCoordinates(boxCoords);
-
-		requestCanvasUpdate();
-	});
-
-	function requestCanvasUpdate() {
-		if (!worker || !viewport) {
-			return;
-		}
-
-		worker.postMessage({
-			method: 'render',
-			boundingBox: $state.snapshot(boundingBox),
-			dimensions: viewport,
-			color: color,
-		});
+		return worker;
 	}
 
 </script>
