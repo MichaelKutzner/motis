@@ -1,5 +1,6 @@
 <script lang="ts">
 	import maplibregl, { CanvasSource, GeoJSONSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+	import union from '@turf/union';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
 
@@ -10,6 +11,7 @@
 	}
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
+	type UnionType = ReturnType<typeof union>;
 
 	let {
 		map,
@@ -38,7 +40,7 @@
 	const geoJSONName = `${name}-geojson`;
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
-	let polygons = $state(undefined);
+	let polygons = $state<UnionType | undefined>(undefined);
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -88,6 +90,8 @@
 		lastData = isochronesData;
 		lastAllTime = maxAllTime;
 		lastSpeed = kilometersPerSecond;
+
+		polygons = undefined;
 	});
 
 	$effect(() => {
@@ -96,7 +100,6 @@
 		}
 		map.setLayoutProperty(canvasName, 'visibility', active && !polygons ? 'visible' : 'none');
 		map.setLayoutProperty(geoJSONName, 'visibility', active && polygons ? 'visible' : 'none');
-		// console.log('Visible:', active && !polygons, active && polygons);
 	});
 
 	$effect(() => {
@@ -147,8 +150,6 @@
 			dimensions: viewport,
 			color: color,
 		});
-
-		polygons = undefined;
 	}
 
 	function setupLayers(map: Map) {

@@ -4,6 +4,8 @@ import { featureCollection } from '@turf/helpers';
 import union from '@turf/union';
 import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 
+const frameRate = 1_000 / 15;  // ≈ 15 frames per second
+
 let canvas: OffscreenCanvas | undefined = undefined;
 
 let boxes: any = undefined;
@@ -35,15 +37,19 @@ self.onmessage = async function(event) {
 		console.log('Rects set');
 		console.log("Total rects:", boxes.length);
 		self.postMessage({method: 'dataUpdated'});
-		const nonContainedBoxes = removeContainedBoxes(boxes);
+		await sleep(50);
+		console.log('DEBUG 1111');
+		const nonContainedBoxes = await removeContainedBoxes(boxes);
 		boxes = nonContainedBoxes;
 		console.log("non contained rects:", nonContainedBoxes.length);
 		// self.postMessage(['rects', rects, idx]);
-		const allCircles = calculateCircles(nonContainedBoxes);
+		const allCircles = await calculateCircles(nonContainedBoxes);
 		circles = allCircles;
 		boxes = undefined;
 		console.log('Circles set');
 		self.postMessage({method: 'dataUpdated'});
+		await sleep(50);
+		console.log('DEBUG 2222');
 
 		console.log('Union started');
 		const polygons = await createUnion(allCircles);
@@ -83,7 +89,7 @@ self.onmessage = async function(event) {
 
 		if (circles) {
 			const isVisible = getIsVisible(boundingBox);
-			await drawCircles(ctx, circles, transform, isVisible, dimensions);
+			drawCircles(ctx, circles, transform, isVisible, dimensions);
 		} else if (boxes) {
 			drawRects(ctx, boxes, transform);
 		}
@@ -113,7 +119,7 @@ function calculateRects(isochrones: IsochronesPos[], maxDistance: (pos: Isochron
 	});
 }
 
-function calculateCircles(isochrones: any[]) {
+async function calculateCircles(isochrones: any[]) {
 	return isochrones.map((data) => {
 		let c = circle([data.data.lng, data.data.lat], data.distance, {
 			// steps: 64,
@@ -131,7 +137,8 @@ function contains(larger: any, smaller: any) {
 	    && bb1._ne.lat >= bb2._ne.lat && bb1._ne.lng >= bb2._ne.lng;
 }
 
-function removeContainedBoxes(boxes: any) {
+async function removeContainedBoxes(boxes: any) {
+	let frameStart = Date.now();
 	// Sort by distance, descending
 	const t1 = Date.now();
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
@@ -140,6 +147,11 @@ function removeContainedBoxes(boxes: any) {
 	// return boxes;
 	let visibleBoxes: typeof boxes = [];
 	for (let i = 0; i < boxes.length; ++i) {
+		const now = Date.now();
+		if (now - frameStart < frameRate) {
+			await sleep(0);
+			frameStart = now;
+		}
 		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
 			visibleBoxes.push(boxes[i]);
 		}
@@ -159,9 +171,15 @@ function removeContainedBoxes(boxes: any) {
 // Create union for smaller polygons first
 // Using a pipe like approach should place larger polygons at the end
 
-function createUnion(d: UnionType[]) {
+async function createUnion(d: UnionType[]) {
+	let frameStart = Date.now();
 	const u = d.filter(((p) => p !== undefined));
 	while (u.length > 1) {
+		const now = Date.now();
+		if (now - frameStart < frameRate) {
+			await sleep(0);
+			frameStart = now;
+		}
 		const a = u.shift()!;
 		const b = u.shift()!;
 		const c = union(featureCollection([a, b]));
@@ -201,7 +219,7 @@ function getIsVisible(boundingBox: LngLatBounds) {
 
 async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
 	let i = 0;
-	circles.filter(is_visible).forEach(async (c) => {
+	circles.filter(is_visible).forEach((c) => {
 		// if (++i % 1000 == 0) {
 			// const f = async () => { console.log('sleeping…'); return new Promise(resolve => setTimeout(resolve, ++i)); };
 			// await f();
@@ -254,4 +272,8 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: any[], transfo
 		// Restore previous state on top
 		ctx.restore();
 	});
+}
+
+async function sleep(ms: number) {
+	return new Promise(resolve => setTimeout(resolve, ms));
 }
