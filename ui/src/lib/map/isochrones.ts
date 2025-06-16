@@ -14,7 +14,7 @@ interface IsochronesPos {
 
 type CircleType = ReturnType<typeof circle>;
 
-self.onmessage = function(event) {
+self.onmessage = async function(event) {
 	console.log('Worker received data');
 	const method = event.data.method;
 	if (method == 'init') {
@@ -30,7 +30,10 @@ self.onmessage = function(event) {
 		boxes = rects;
 		circles = undefined;
 		console.log('Rects set');
+		console.log("Total rects:", boxes.length);
 		self.postMessage({method: 'dataUpdated'});
+		const nonContainedBoxes = removeContainedBoxes(boxes);
+		console.log("non contained rects:", nonContainedBoxes.length);
 		// self.postMessage(['rects', rects, idx]);
 		const allCircles = calculateCircles(isochronesData, maxDistance);
 		circles = allCircles;
@@ -68,7 +71,7 @@ self.onmessage = function(event) {
 
 		if (circles) {
 			const isVisible = getIsVisible(boundingBox);
-			drawCircles(ctx, circles, transform, isVisible, dimensions);
+			await drawCircles(ctx, circles, transform, isVisible, dimensions);
 		} else if (boxes) {
 			drawRects(ctx, boxes, transform);
 		}
@@ -87,10 +90,14 @@ function calculateRects(isochrones: IsochronesPos[], maxDistance: (pos: Isochron
 		const min_lat_rad = data.lat * Math.PI / 180;
 		const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
 		const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
-		return LngLatBounds.convert([
-			[data.lng - d_lng, data.lat - d_lat],
-			[data.lng + d_lng, data.lat + d_lat],
-		]);
+		return {
+			bbox: LngLatBounds.convert([
+				[data.lng - d_lng, data.lat - d_lat],
+				[data.lng + d_lng, data.lat + d_lat],
+			]),
+			distance: r,
+			data: data,
+		};
 	});
 }
 
@@ -105,6 +112,37 @@ function calculateCircles(isochrones: IsochronesPos[], maxDistance: (pos: Isochr
 		return c;
 	});
 }
+
+function contains(larger: any, smaller: any) {
+	const bb1 = larger.bbox;
+	const bb2 = smaller.bbox;
+	return bb1._sw.lat <= bb2._sw.lat && bb1._sw.lng <= bb2._sw.lng
+	    && bb1._ne.lat >= bb2._ne.lat && bb1._ne.lng >= bb2._ne.lng;
+}
+
+function removeContainedBoxes(boxes: any) {
+	// Sort by distance, descending
+	const t1 = Date.now();
+	boxes.sort((a: any, b: any) => b.distance - a.distance);
+	const t2 = Date.now();
+	// console.log(contains(boxes[0], boxes[1]));
+	// return boxes;
+	let visibleBoxes: typeof boxes = [];
+	for (let i = 0; i < boxes.length; ++i) {
+		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
+			visibleBoxes.push(boxes[i]);
+		}
+	}
+	const t3 = Date.now();
+	console.log('Sorting took:', t2 - t1);
+	console.log('Filtering took:', t3 - t2);
+	return visibleBoxes;
+}
+// function removeContained(circles: CircleType[]) {
+// 	// TODO
+// 	console.log(circles.length);
+// 	return circles;
+// }
 
 function getTransformer(boundingBox: LngLatBounds, dimensions: number[]) {
 	return (pos: number[]) => {
@@ -133,8 +171,13 @@ function getIsVisible(boundingBox: LngLatBounds) {
 	}
 }
 
-function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
-	circles.filter(is_visible).forEach((c) => {
+async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
+	let i = 0;
+	circles.filter(is_visible).forEach(async (c) => {
+		// if (++i % 1000 == 0) {
+			// const f = async () => { console.log('sleeping…'); return new Promise(resolve => setTimeout(resolve, ++i)); };
+			// await f();
+		// }
 		ctx.save(); // Store canvas state
 
 		const b = c.bbox!; // Existence checked in filter()
@@ -169,8 +212,10 @@ function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType
 	// self.postMessage(true);
 }
 
-function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: maplibregl.LngLatBounds[], transform: (p: number[]) => number[]) {
-	rects.forEach((b) => {
+// function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: maplibregl.LngLatBounds[], transform: (p: number[]) => number[]) {
+function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: any[], transform: (p: number[]) => number[]) {
+	rects.forEach((bx) => {
+		const b = bx.bbox;
 		ctx.save(); // Store canvas state
 
 		const min = transform([b._sw.lng, b._sw.lat]);
