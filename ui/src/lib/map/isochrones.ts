@@ -1,5 +1,7 @@
 import bbox from '@turf/bbox';
 import circle from '@turf/circle';
+import { featureCollection } from '@turf/helpers';
+import union from '@turf/union';
 import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 
 let canvas: OffscreenCanvas | undefined = undefined;
@@ -13,6 +15,7 @@ interface IsochronesPos {
 }
 
 type CircleType = ReturnType<typeof circle>;
+type UnionType = ReturnType<typeof union>;
 
 self.onmessage = async function(event) {
 	console.log('Worker received data');
@@ -41,6 +44,12 @@ self.onmessage = async function(event) {
 		boxes = undefined;
 		console.log('Circles set');
 		self.postMessage({method: 'dataUpdated'});
+
+		console.log('Union started');
+		const polygons = await createUnion(allCircles);
+		console.log('Union computed');
+		self.postMessage({method: 'polygonsComputed', polygons: polygons});
+		console.log('Message sent');
 		// self.postMessage(['renderer', createCircleWorkerURL(allCircles), idx]);
 		// self.postMessage(['circles', allCircles, idx]);
 		// const visibleCircles = removeContained(allCircles);
@@ -69,6 +78,7 @@ self.onmessage = async function(event) {
 		const transform = getTransformer(boundingBox, dimensions);
 
 		ctx.fillStyle = color;
+		ctx.fillStyle = 'magenta';
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
 		if (circles) {
@@ -144,6 +154,23 @@ function removeContainedBoxes(boxes: any) {
 // 	console.log(circles.length);
 // 	return circles;
 // }
+
+// Implementation based on https://stackoverflow.com/a/75982694
+// Create union for smaller polygons first
+// Using a pipe like approach should place larger polygons at the end
+
+function createUnion(d: UnionType[]) {
+	const u = d.filter(((p) => p !== undefined));
+	while (u.length > 1) {
+		const a = u.shift()!;
+		const b = u.shift()!;
+		const c = union(featureCollection([a, b]));
+		if (c) {
+			u.push(c);
+		}
+	}
+	return u.length == 1 ? u[0] : null;
+}
 
 function getTransformer(boundingBox: LngLatBounds, dimensions: number[]) {
 	return (pos: number[]) => {

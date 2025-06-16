@@ -1,5 +1,5 @@
 <script lang="ts">
-	import maplibregl, { CanvasSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+	import maplibregl, { CanvasSource, GeoJSONSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
 
@@ -34,8 +34,11 @@
 	} = $props();
 
 	const name = 'isochrones-data';
+	const canvasName = `${name}-canvas`;
+	const geoJSONName = `${name}-geojson`;
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
+	let polygons = $state(undefined);
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -91,20 +94,39 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setLayoutProperty(name, 'visibility', active ? 'visible' : 'none');
+		map.setLayoutProperty(canvasName, 'visibility', active && !polygons ? 'visible' : 'none');
+		map.setLayoutProperty(geoJSONName, 'visibility', active && polygons ? 'visible' : 'none');
+		// console.log('Visible:', active && !polygons, active && polygons);
 	});
 
 	$effect(() => {
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setPaintProperty(name, 'raster-opacity', opacity / 1000);
+		map.setPaintProperty(canvasName, 'raster-opacity', opacity / 1000);
+		map.setPaintProperty(geoJSONName, 'fill-opacity', opacity / 1000);
+	});
+
+	$effect(() => {
+		if (!map || !canvasSource) {
+			return;
+		}
+		map.setPaintProperty(geoJSONName, 'fill-color', color);
+	});
+
+	$effect(() => {
+		if (!map || !canvasSource) {
+			return;
+		}
+		console.log('Polygons updating …', polygons !== undefined);
+		(map.getSource(geoJSONName) as GeoJSONSource).setData(polygons ?? '[]');
 	});
 
 	$effect(() => requestCanvasUpdate());
 
 	function requestCanvasUpdate() {
-		if (!map || !active) {
+		if (!map || !active || polygons) {
+		console.log('No render update');
 			return;
 		}
 		if (!canvasSource) {
@@ -125,23 +147,40 @@
 			dimensions: viewport,
 			color: color,
 		});
+
+		polygons = undefined;
 	}
 
 	function setupLayers(map: Map) {
-		map.addSource(name, {
+		map.addSource(canvasName, {
 			type: 'canvas',
 			canvas: canvas,
 			coordinates: boxCoords,
 		});
 		map.addLayer({
-			id: name,
+			id: canvasName,
 			type: 'raster',
-			source: name,
+			source: canvasName,
 			paint: {
 				'raster-opacity': opacity / 1000
 			}
 		});
-		return map.getSource(name) as CanvasSource;
+
+		map.addSource(geoJSONName, {
+			type: 'geojson',
+			data: '[]',
+		});
+		map.addLayer({
+			id: geoJSONName,
+			type: 'fill',
+			source: geoJSONName,
+			paint: {
+				'fill-color': color,
+				'fill-opacity': opacity / 1000
+			}
+		});
+
+		return map.getSource(canvasName) as CanvasSource;
 	}
 
 	function setupWorker() {
@@ -159,6 +198,8 @@
 				const method = event.data.method;
 				if (method == 'dataUpdated') {
 					requestCanvasUpdate();
+				} else if (method == 'polygonsComputed') {
+					polygons = event.data.polygons;
 				} else {
 					console.log(`Unknown method '${method}'`);
 				}
