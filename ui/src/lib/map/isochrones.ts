@@ -33,15 +33,17 @@ self.onmessage = async function(event) {
 		console.log("Total rects:", boxes.length);
 		self.postMessage({method: 'dataUpdated'});
 		const nonContainedBoxes = removeContainedBoxes(boxes);
+		boxes = nonContainedBoxes;
 		console.log("non contained rects:", nonContainedBoxes.length);
 		// self.postMessage(['rects', rects, idx]);
-		const allCircles = calculateCircles(isochronesData, maxDistance);
+		const allCircles = calculateCircles(nonContainedBoxes);
 		circles = allCircles;
 		boxes = undefined;
 		console.log('Circles set');
 		self.postMessage({method: 'dataUpdated'});
 		// self.postMessage(['renderer', createCircleWorkerURL(allCircles), idx]);
 		// self.postMessage(['circles', allCircles, idx]);
+		// const visibleCircles = removeContained(allCircles);
 		/*
 		const visibleCircles = TODO;
 		self.postMessage(['circles', visibleCircles, idx]);
@@ -101,10 +103,9 @@ function calculateRects(isochrones: IsochronesPos[], maxDistance: (pos: Isochron
 	});
 }
 
-function calculateCircles(isochrones: IsochronesPos[], maxDistance: (pos: IsochronesPos) => number) {
+function calculateCircles(isochrones: any[]) {
 	return isochrones.map((data) => {
-		const r = maxDistance(data);
-		let c = circle([data.lng, data.lat], r, {
+		let c = circle([data.data.lng, data.data.lat], data.distance, {
 			// steps: 64,
 			units: 'kilometers'
 		});
