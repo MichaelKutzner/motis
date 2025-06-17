@@ -138,7 +138,6 @@ function contains(larger: any, smaller: any) {
 }
 
 async function removeContainedBoxes(boxes: any) {
-	let frameStart = Date.now();
 	// Sort by distance, descending
 	const t1 = Date.now();
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
@@ -147,13 +146,11 @@ async function removeContainedBoxes(boxes: any) {
 	// return boxes;
 	let visibleBoxes: typeof boxes = [];
 	for (let i = 0; i < boxes.length; ++i) {
-		const now = Date.now();
-		if (now - frameStart < frameRate) {
+		if (++i % 100 == 0) {
 			await sleep(0);
-			frameStart = now;
 		}
-		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
-			visibleBoxes.push(boxes[i]);
+		if (await visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
+			await visibleBoxes.push(boxes[i]);
 		}
 	}
 	const t3 = Date.now();
@@ -172,14 +169,13 @@ async function removeContainedBoxes(boxes: any) {
 // Using a pipe like approach should place larger polygons at the end
 
 async function createUnion(d: UnionType[]) {
-	let frameStart = Date.now();
 	const u = d.filter(((p) => p !== undefined));
+	// let startupIterations = Math.ceil(1.5 * u.length);
+	await sleep(0);
 	while (u.length > 1) {
-		const now = Date.now();
-		if (now - frameStart < frameRate) {
+		// if (--startupIterations <= 0 || startupIterations % 50 == 0) {
 			await sleep(0);
-			frameStart = now;
-		}
+		// }
 		const a = u.shift()!;
 		const b = u.shift()!;
 		const c = union(featureCollection([a, b]));
