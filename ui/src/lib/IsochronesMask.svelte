@@ -76,22 +76,11 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
-	// const renderModes = {
-	// 	0: 'Simple approximation (fast)',
-	// 	1: 'Basic approximation (slow rendering)',
-	// 	2: 'Render approximation (long computation)',
-	// };
 	const renderLevels = new Map([
 		[0, 'Simple approximation (fast)'],
 		[1, 'Basic approximation (slow rendering)'],
 		[2, 'Render approximation (long computation)'],
 	]);
-	// const possibleRenderModes = [...Array(Object.keys(renderModes).length).keys()].map((i) => (
-	// const possibleRenderLevels = [...Array(renderLevels.size).keys()].map((i) => (
-	// const possibleRenderLevels = renderLevels.keys().map((i) => (
-	// 	{value: i.toString(), label: renderLevels.get(i)}
-	// 	// {value: i, label: renderModes[i as 0|1|2]}
-	// ));
 	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
 		{value: id.toString(), label: label}
 	)).toArray();

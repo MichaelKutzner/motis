@@ -141,28 +141,10 @@
 	$effect(() => requestCanvasUpdate());
 
 	function requestCanvasUpdate() {
-		// if (!map || !active || polygons) {
 		if (!map || !active) {
 			return;
 		}
-	// 	if (availableRenderLevel > renderMode) {
-	// 		if (currentRenderLevel == renderMode) {
-	// 			// New level calculated; No action needed
-	// 		} else {
-	// 			// renderMode changed
-	// 			updateRendering();
-	// 		}
-	// 	} else {
-	// 		if (currentRenderLevel == renderMode) {
-	// 			// New level calculated; No action needed
-	// 		} else {
-	// 			// renderMode changed
-	// 			updateRendering();
-	// 		}
-	// 	}
-	// }
 
-	// function updateRendering() {
 		const nextLevel = Math.min(renderMode, availableRenderLevel);
 
 		if (nextLevel < 2) {

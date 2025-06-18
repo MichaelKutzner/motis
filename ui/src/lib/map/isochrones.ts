@@ -33,7 +33,6 @@ self.onmessage = async function(event) {
 		// Unser previous results
 		boxes = undefined;
 		circles = undefined;
-		//const speed = getSpeed(streetModes, wheelchair);  //calculate_constants(maxAllTime, streetModes, wheelchair);
 		const maxDistance = getMaxDistanceFunction(maxDuration, kilometersPerSecond);
 		const rects = calculateRects(isochronesData, maxDistance);
 		boxes = rects;
@@ -48,7 +47,6 @@ self.onmessage = async function(event) {
 		if (maxRenderLevel < 1) {
 			return;
 		}
-		// self.postMessage(['rects', rects, idx]);
 		const allCircles = await calculateCircles(nonContainedBoxes);
 		circles = allCircles;
 		console.log('Circles set');
@@ -64,15 +62,6 @@ self.onmessage = async function(event) {
 		console.log('Union computed');
 		self.postMessage({method: 'dataUpdated', level: 2, polygons: polygons});
 		console.log('Message sent');
-		// self.postMessage(['renderer', createCircleWorkerURL(allCircles), idx]);
-		// self.postMessage(['circles', allCircles, idx]);
-		// const visibleCircles = removeContained(allCircles);
-		/*
-		const visibleCircles = TODO;
-		self.postMessage(['circles', visibleCircles, idx]);
-		const polygons = TODO;
-		self.postMessage(['polygons', polygons, idx]);
-		*/
 	} else if (method == 'render-canvas') {
 		console.log('Render requested', boxes == undefined, circles == undefined);
 		if (!canvas) {
@@ -154,13 +143,9 @@ async function removeContainedBoxes(boxes: any) {
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
 	const t2 = Date.now();
 	console.log('sorted');
-	// console.log(contains(boxes[0], boxes[1]));
-	// return boxes;
 	let visibleBoxes: typeof boxes = [];
 	for (let i = 0; i < boxes.length; ++i) {
-		// if (++i % 100 == 0) {
-			await sleep(0);
-		// }
+		await sleep(0);
 		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
 			visibleBoxes.push(boxes[i]);
 		}
@@ -170,11 +155,6 @@ async function removeContainedBoxes(boxes: any) {
 	console.log('Filtering took:', t3 - t2);
 	return visibleBoxes;
 }
-// function removeContained(circles: CircleType[]) {
-// 	// TODO
-// 	console.log(circles.length);
-// 	return circles;
-// }
 
 // Implementation based on https://stackoverflow.com/a/75982694
 // Create union for smaller polygons first
@@ -182,12 +162,10 @@ async function removeContainedBoxes(boxes: any) {
 
 async function createUnion(d: UnionType[]) {
 	const u = d.filter(((p) => p !== undefined));
-	// let startupIterations = Math.ceil(1.5 * u.length);
 	await sleep(0);
 	while (u.length > 1) {
-		// if (--startupIterations <= 0 || startupIterations % 50 == 0) {
-			await sleep(0);
-		// }
+		await sleep(0);
+
 		const a = u.shift()!;
 		const b = u.shift()!;
 		const c = union(featureCollection([a, b]));
@@ -228,10 +206,6 @@ function getIsVisible(boundingBox: LngLatBounds) {
 async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
 	let i = 0;
 	circles.filter(is_visible).forEach((c) => {
-		// if (++i % 1000 == 0) {
-			// const f = async () => { console.log('sleeping…'); return new Promise(resolve => setTimeout(resolve, ++i)); };
-			// await f();
-		// }
 		ctx.save(); // Store canvas state
 
 		const b = c.bbox!; // Existence checked in filter()
@@ -262,11 +236,8 @@ async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: Circ
 		// Restore previous state on top
 		ctx.restore();
 	});
-
-	// self.postMessage(true);
 }
 
-// function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: maplibregl.LngLatBounds[], transform: (p: number[]) => number[]) {
 function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: any[], transform: (p: number[]) => number[]) {
 	rects.forEach((bx) => {
 		const b = bx.bbox;
