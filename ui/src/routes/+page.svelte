@@ -214,6 +214,8 @@
 	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
+	let isochronesRenderMode = $state(2);
+	let isochronesMaxRenderMode = $state(2);
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -522,6 +524,8 @@
 								bind:elevationCosts
 								bind:ignorePreTransitRentalReturnConstraints
 								bind:ignorePostTransitRentalReturnConstraints
+								bind:renderMode={isochronesRenderMode}
+								bind:maxRenderMode={isochronesMaxRenderMode}
 								bind:color={isochronesColor}
 								bind:opacity={isochronesOpacity}
 							/>
@@ -634,6 +638,8 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
+			renderMode={isochronesRenderMode}
+			maxRenderMode={isochronesMaxRenderMode}
 			color={isochronesColor}
 			opacity={isochronesOpacity}
 		/>

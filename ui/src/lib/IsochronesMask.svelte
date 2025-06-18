@@ -7,6 +7,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
+	import * as Select from '$lib/components/ui/select';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -37,6 +38,8 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
+		renderMode = $bindable(),
+		maxRenderMode = $bindable(),
 		color = $bindable(),
 		opacity = $bindable()
 	}: {
@@ -58,6 +61,8 @@
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
+		renderMode: number;
+		maxRenderMode: number;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -71,6 +76,25 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
+	// const renderModes = {
+	// 	0: 'Simple approximation (fast)',
+	// 	1: 'Basic approximation (slow rendering)',
+	// 	2: 'Render approximation (long computation)',
+	// };
+	const renderLevels = new Map([
+		[0, 'Simple approximation (fast)'],
+		[1, 'Basic approximation (slow rendering)'],
+		[2, 'Render approximation (long computation)'],
+	]);
+	// const possibleRenderModes = [...Array(Object.keys(renderModes).length).keys()].map((i) => (
+	// const possibleRenderLevels = [...Array(renderLevels.size).keys()].map((i) => (
+	// const possibleRenderLevels = renderLevels.keys().map((i) => (
+	// 	{value: i.toString(), label: renderLevels.get(i)}
+	// 	// {value: i, label: renderModes[i as 0|1|2]}
+	// ));
+	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
+		{value: id.toString(), label: label}
+	)).toArray();
 
 	let oneItems = $state<Array<Location>>([]);
 
@@ -101,6 +125,38 @@
 </script>
 
 {#snippet additionalComponents()}
+	<div class="grid grid-cols-4 items-center gap-2">
+		<div>
+			Preferred render level
+		</div>
+		<Select.Root type="single" bind:value={() => renderMode.toString(), (v) => renderMode = parseInt(v)}>
+			<Select.Trigger class="overflow-hidden" aria-label=renderMode>
+				{renderLevels.get(renderMode)}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each possibleRenderLevels as mode, i (i + mode.value)}
+					<Select.Item value={mode.value} label={mode.label}>
+						{mode.label}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+		<div>
+			Maximum render level
+		</div>
+		<Select.Root type="single" bind:value={() => maxRenderMode.toString(), (v) => maxRenderMode = parseInt(v)}>
+			<Select.Trigger class="overflow-hidden" aria-label=maxRenderMode>
+				{renderLevels.get(maxRenderMode)}
+			</Select.Trigger>
+			<Select.Content sideOffset={10}>
+				{#each possibleRenderLevels as mode, i (i + mode.value)}
+					<Select.Item value={mode.value} label={mode.label}>
+						{mode.label}
+					</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+	</div>
 	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 		<div class="text-sm">
 			{t.isochronesStyling}

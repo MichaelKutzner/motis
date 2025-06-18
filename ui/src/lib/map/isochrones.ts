@@ -22,39 +22,47 @@ type UnionType = ReturnType<typeof union>;
 self.onmessage = async function(event) {
 	console.log('Worker received data');
 	const method = event.data.method;
-	if (method == 'init') {
+	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
-	} else if (method == 'update') {
+	} else if (method == 'update-data') {
 		const isochronesData = event.data.data;
 		const maxDuration = event.data.maxDuration;
+		const maxRenderLevel = event.data.maxRenderLevel;
 		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const idx = event.data.idx;
+		// Unser previous results
+		boxes = undefined;
+		circles = undefined;
 		//const speed = getSpeed(streetModes, wheelchair);  //calculate_constants(maxAllTime, streetModes, wheelchair);
 		const maxDistance = getMaxDistanceFunction(maxDuration, kilometersPerSecond);
 		const rects = calculateRects(isochronesData, maxDistance);
 		boxes = rects;
-		circles = undefined;
 		console.log('Rects set');
 		console.log("Total rects:", boxes.length);
-		self.postMessage({method: 'dataUpdated'});
+		self.postMessage({method: 'dataUpdated', level: 0});
 		await sleep(50);
 		console.log('DEBUG 1111');
 		const nonContainedBoxes = await removeContainedBoxes(boxes);
 		boxes = nonContainedBoxes;
 		console.log("non contained rects:", nonContainedBoxes.length);
+		if (maxRenderLevel < 1) {
+			return;
+		}
 		// self.postMessage(['rects', rects, idx]);
 		const allCircles = await calculateCircles(nonContainedBoxes);
 		circles = allCircles;
-		boxes = undefined;
 		console.log('Circles set');
-		self.postMessage({method: 'dataUpdated'});
+		self.postMessage({method: 'dataUpdated', level: 1});
 		await sleep(50);
 		console.log('DEBUG 2222');
+		if (maxRenderLevel < 2) {
+			return;
+		}
 
 		console.log('Union started');
 		const polygons = await createUnion(allCircles);
 		console.log('Union computed');
-		self.postMessage({method: 'polygonsComputed', polygons: polygons});
+		self.postMessage({method: 'dataUpdated', level: 2, polygons: polygons});
 		console.log('Message sent');
 		// self.postMessage(['renderer', createCircleWorkerURL(allCircles), idx]);
 		// self.postMessage(['circles', allCircles, idx]);
@@ -65,14 +73,15 @@ self.onmessage = async function(event) {
 		const polygons = TODO;
 		self.postMessage(['polygons', polygons, idx]);
 		*/
-	} else if (method == 'render') {
+	} else if (method == 'render-canvas') {
 		console.log('Render requested', boxes == undefined, circles == undefined);
-		const boundingBox = event.data.boundingBox;
 		if (!canvas) {
 			return;
 		}
+		const boundingBox = event.data.boundingBox;
 		const color = event.data.color;
 		const dimensions = event.data.dimensions;
+		const level = event.data.level;
 		console.log('Dims:', dimensions);
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
@@ -87,11 +96,13 @@ self.onmessage = async function(event) {
 		ctx.fillStyle = 'magenta';
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		if (circles) {
+		if (level == 1 && circles) {
 			const isVisible = getIsVisible(boundingBox);
 			drawCircles(ctx, circles, transform, isVisible, dimensions);
-		} else if (boxes) {
+		} else if (level == 0 && boxes) {
 			drawRects(ctx, boxes, transform);
+		} else {
+			console.log(`Cannot render level ${level}`);
 		}
 	}
 }
@@ -142,15 +153,16 @@ async function removeContainedBoxes(boxes: any) {
 	const t1 = Date.now();
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
 	const t2 = Date.now();
+	console.log('sorted');
 	// console.log(contains(boxes[0], boxes[1]));
 	// return boxes;
 	let visibleBoxes: typeof boxes = [];
 	for (let i = 0; i < boxes.length; ++i) {
-		if (++i % 100 == 0) {
+		// if (++i % 100 == 0) {
 			await sleep(0);
-		}
-		if (await visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
-			await visibleBoxes.push(boxes[i]);
+		// }
+		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
+			visibleBoxes.push(boxes[i]);
 		}
 	}
 	const t3 = Date.now();

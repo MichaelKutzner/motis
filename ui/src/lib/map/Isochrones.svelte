@@ -21,6 +21,8 @@
 		wheelchair,
 		maxAllTime,
 		active,
+		renderMode,
+		maxRenderMode,
 		color,
 		opacity
 	}: {
@@ -31,6 +33,8 @@
 		wheelchair: boolean;
 		maxAllTime: number;
 		active: boolean;
+		renderMode: number;
+		maxRenderMode: number;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -41,6 +45,8 @@
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
 	let polygons = $state<UnionType | undefined>(undefined);
+	let currentRenderLevel = $state(-1);
+	let availableRenderLevel = $state(-1);
 
 	let lastData: IsochronesPos[] | undefined = undefined;
 	let lastAllTime: number = maxAllTime;
@@ -71,35 +77,42 @@
 	let worker: Worker | undefined = undefined;
 
 	$effect(() => {
-		if (
-			!active ||
-			(lastData == isochronesData && lastAllTime == maxAllTime && lastSpeed == kilometersPerSecond)
-		) {
+		if (!active) {
 			return;
 		}
 
 		const worker = setupWorker();
+
+		if (lastData != isochronesData || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+			worker.postMessage({
+				method: 'update-data',
+				data: $state.snapshot(isochronesData),
+				maxDuration: $state.snapshot(maxAllTime),
+				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
+				maxRenderLevel: maxRenderMode,
+				idx: 1,  // TODO Add ID to check responses
+			});
+
+			lastData = isochronesData;
+			lastAllTime = maxAllTime;
+			lastSpeed = kilometersPerSecond;
+
+			polygons = undefined;
+			availableRenderLevel = -1;
+		}
+
 		worker.postMessage({
-			method: 'update',
-			data: $state.snapshot(isochronesData),
-			maxDuration: $state.snapshot(maxAllTime),
-			kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-			idx: 1,
+			method: 'set-render-depth',
+			maxRenderLevel: maxRenderMode,
 		});
-
-		lastData = isochronesData;
-		lastAllTime = maxAllTime;
-		lastSpeed = kilometersPerSecond;
-
-		polygons = undefined;
 	});
 
 	$effect(() => {
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setLayoutProperty(canvasName, 'visibility', active && !polygons ? 'visible' : 'none');
-		map.setLayoutProperty(geoJSONName, 'visibility', active && polygons ? 'visible' : 'none');
+		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel < 2 ? 'visible' : 'none');
+		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 ? 'visible' : 'none');
 	});
 
 	$effect(() => {
@@ -128,28 +141,55 @@
 	$effect(() => requestCanvasUpdate());
 
 	function requestCanvasUpdate() {
-		if (!map || !active || polygons) {
-		console.log('No render update');
+		// if (!map || !active || polygons) {
+		if (!map || !active) {
 			return;
 		}
-		if (!canvasSource) {
-			canvasSource = setupLayers(map);
+	// 	if (availableRenderLevel > renderMode) {
+	// 		if (currentRenderLevel == renderMode) {
+	// 			// New level calculated; No action needed
+	// 		} else {
+	// 			// renderMode changed
+	// 			updateRendering();
+	// 		}
+	// 	} else {
+	// 		if (currentRenderLevel == renderMode) {
+	// 			// New level calculated; No action needed
+	// 		} else {
+	// 			// renderMode changed
+	// 			updateRendering();
+	// 		}
+	// 	}
+	// }
+
+	// function updateRendering() {
+		const nextLevel = Math.min(renderMode, availableRenderLevel);
+
+		if (nextLevel < 2) {
 			if (!canvasSource) {
-				return;
+				canvasSource = setupLayers(map);
+				if (!canvasSource) {
+					return;
+				}
+			} else {
+				canvasSource.setCoordinates(boxCoords);
 			}
+			const worker = setupWorker();
+
+			const viewport = map._containerDimensions();
+
+			currentRenderLevel = nextLevel;
+
+			worker.postMessage({
+				method: 'render-canvas',
+				level: currentRenderLevel,
+				boundingBox: $state.snapshot(boundingBox),
+				dimensions: viewport,
+				color: color,
+			});
 		} else {
-			canvasSource.setCoordinates(boxCoords);
+			currentRenderLevel = nextLevel;
 		}
-		const worker = setupWorker();
-
-		const viewport = map._containerDimensions();
-
-		worker.postMessage({
-			method: 'render',
-			boundingBox: $state.snapshot(boundingBox),
-			dimensions: viewport,
-			color: color,
-		});
 	}
 
 	function setupLayers(map: Map) {
@@ -191,16 +231,23 @@
 			let renderCanvas = canvas.transferControlToOffscreen();
 
 			worker.postMessage({
-				method: 'init',
+				method: 'set-canvas',
 				canvas: renderCanvas,
 			}, [renderCanvas]);
 
 			worker.onmessage = (event) => {
 				const method = event.data.method;
 				if (method == 'dataUpdated') {
-					requestCanvasUpdate();
-				} else if (method == 'polygonsComputed') {
-					polygons = event.data.polygons;
+					const level = event.data.level;
+					if (level == 2) {
+						polygons = event.data.polygons;
+					}
+					if (level > availableRenderLevel) {
+						availableRenderLevel = level;
+						if (availableRenderLevel <= renderMode) {
+							requestCanvasUpdate();
+						}
+					}
 				} else {
 					console.log(`Unknown method '${method}'`);
 				}
