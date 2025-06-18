@@ -25,6 +25,7 @@ const translations: Translations = {
 	later: 'later',
 	earlier: 'earlier',
 	departures: 'Departures',
+	isochrones: 'Isochrones',
 	switchToArrivals: 'Switch to arrivals',
 	switchToDepartures: 'Switch to departures',
 	track: 'Track',
@@ -94,7 +95,7 @@ const translations: Translations = {
 	FUNICULAR: 'Funicular',
 	AREAL_LIFT: 'Aerial lift',
 	routingSegments: {
-		maxChangeovers: 'Max. changeovers',
+		maxTransfers: 'Max. transfers',
 		maxTravelTime: 'Max. travel time',
 		firstMile: 'First mile',
 		lastMile: 'Last mile',

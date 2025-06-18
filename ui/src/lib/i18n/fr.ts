@@ -24,6 +24,7 @@ const translations: Translations = {
 	earlier: 'plus tôt',
 	departures: 'Départs',
 	connections: 'Itinéraires',
+	isochrones: 'Isochrones',
 	switchToArrivals: 'Afficher les arrivées',
 	switchToDepartures: 'Afficher les départs',
 	track: 'Voie',
@@ -84,7 +85,7 @@ const translations: Translations = {
 	REGIONAL_RAIL: 'Train régional',
 	OTHER: 'Autres',
 	routingSegments: {
-		maxChangeovers: 'Max. de correspondances',
+		maxTransfers: 'Max. de correspondances',
 		maxTravelTime: 'Temps de trajet max.',
 		firstMile: 'Premier kilomètre',
 		lastMile: 'Dernier kilomètre',

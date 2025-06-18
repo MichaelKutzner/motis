@@ -1,6 +1,7 @@
 <script lang="ts">
-	import maplibregl, { CanvasSource, GeoJSONSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import union from '@turf/union';
+	import maplibregl from 'maplibre-gl';
+	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/isochrones.ts?worker';
 
