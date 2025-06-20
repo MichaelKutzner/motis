@@ -130,7 +130,7 @@ async function calculateCircles(isochrones: any[]) {
 	});
 }
 
-function contains(larger: any, smaller: any) {
+function contains(larger: any, smaller: any): boolean {
 	const bb1 = larger.bbox;
 	const bb2 = smaller.bbox;
 	return bb1._sw.lat <= bb2._sw.lat && bb1._sw.lng <= bb2._sw.lng
@@ -143,16 +143,16 @@ async function removeContainedBoxes(boxes: any) {
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
 	const t2 = Date.now();
 	console.log('sorted');
-	let visibleBoxes: typeof boxes = [];
-	for (let i = 0; i < boxes.length; ++i) {
-		await sleep(0);
-		if (visibleBoxes.every((b: any) => !contains(b, boxes[i]))) {
-			visibleBoxes.push(boxes[i]);
-		}
-	}
+	const isCoveredPromises = boxes.map(async (box: any, index: number) =>
+		boxes.slice(0, index).some((b: any) => contains(b, box))
+	);
+	const isCovered = await Promise.all(isCoveredPromises);
+	const t22 = Date.now();
+	const visibleBoxes = boxes.filter((box: any , index: number) => !isCovered[index]);
 	const t3 = Date.now();
 	console.log('Sorting took:', t2 - t1);
-	console.log('Filtering took:', t3 - t2);
+	console.log('Tests took:', t22 - t2);
+	console.log('Filtering took:', t3 - t22);
 	return visibleBoxes;
 }
 
