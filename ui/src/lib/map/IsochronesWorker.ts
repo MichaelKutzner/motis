@@ -3,13 +3,16 @@ import circle from '@turf/circle';
 import { featureCollection } from '@turf/helpers';
 import union from '@turf/union';
 import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
 
-const frameRate = 1_000 / 15;  // ≈ 15 frames per second
+// const frameRate = 1_000 / 15;  // ≈ 15 frames per second
 
 let canvas: OffscreenCanvas | undefined = undefined;
 
-let boxes: any = undefined;
-let circles: any = undefined;
+let boxes: LngLatBounds[] | undefined = undefined;
+let circles: CircleType[] | undefined = undefined;
+let shapeWorker: Worker | undefined = undefined;
+
 interface IsochronesPos {
 	lat: number;
 	lng: number;
@@ -22,46 +25,29 @@ type UnionType = ReturnType<typeof union>;
 self.onmessage = async function(event) {
 	console.log('Worker received data');
 	const method = event.data.method;
+	console.log('Method:', method);
 	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
 	} else if (method == 'update-data') {
 		const isochronesData = event.data.data;
 		const maxDuration = event.data.maxDuration;
-		const maxRenderLevel = event.data.maxRenderLevel;
+		// const maxRenderLevel = event.data.maxRenderLevel;
 		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const idx = event.data.idx;
 		// Unser previous results
 		boxes = undefined;
 		circles = undefined;
-		const maxDistance = getMaxDistanceFunction(maxDuration, kilometersPerSecond);
-		const rects = calculateRects(isochronesData, maxDistance);
-		boxes = rects;
-		console.log('Rects set');
-		console.log("Total rects:", boxes.length);
-		self.postMessage({method: 'dataUpdated', level: 0});
-		await sleep(50);
-		console.log('DEBUG 1111');
-		const nonContainedBoxes = await removeContainedBoxes(boxes);
-		boxes = nonContainedBoxes;
-		console.log("non contained rects:", nonContainedBoxes.length);
-		if (maxRenderLevel < 1) {
-			return;
-		}
-		const allCircles = await calculateCircles(nonContainedBoxes);
-		circles = allCircles;
-		console.log('Circles set');
-		self.postMessage({method: 'dataUpdated', level: 1});
-		await sleep(50);
-		console.log('DEBUG 2222');
-		if (maxRenderLevel < 2) {
-			return;
-		}
-
-		console.log('Union started');
-		const polygons = await createUnion(allCircles);
-		console.log('Union computed');
-		self.postMessage({method: 'dataUpdated', level: 2, polygons: polygons});
-		console.log('Message sent');
+		let worker = setupWorker();
+		worker.postMessage({
+			method: 'set-data',
+			data: isochronesData,
+			speed:kilometersPerSecond,
+			maxDuration:maxDuration,
+		});
+	} else if (method == 'set-render-depth') {
+		let worker = setupWorker();
+		const depth = event.data.maxRenderLevel;
+		worker.postMessage({method: 'update-depth', depth});
 	} else if (method == 'render-canvas') {
 		console.log('Render requested', boxes == undefined, circles == undefined);
 		if (!canvas) {
@@ -71,6 +57,7 @@ self.onmessage = async function(event) {
 		const color = event.data.color;
 		const dimensions = event.data.dimensions;
 		const level = event.data.level;
+		console.log('Rendering level:', level);
 		console.log('Dims:', dimensions);
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
@@ -94,86 +81,6 @@ self.onmessage = async function(event) {
 			console.log(`Cannot render level ${level}`);
 		}
 	}
-}
-
-function getMaxDistanceFunction(maxDuration: number, kilometersPerSecond: number) {
-	return (pos: IsochronesPos) => Math.min(pos.seconds, maxDuration) * kilometersPerSecond;
-}
-
-function calculateRects(isochrones: IsochronesPos[], maxDistance: (pos: IsochronesPos) => number) {
-	return isochrones.map((data) => {
-		const r = maxDistance(data);
-		// Compare geo::includes/geo/box.h
-		const d_lat = r / 111.0;
-		const min_lat_rad = data.lat * Math.PI / 180;
-		const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
-		const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
-		return {
-			bbox: LngLatBounds.convert([
-				[data.lng - d_lng, data.lat - d_lat],
-				[data.lng + d_lng, data.lat + d_lat],
-			]),
-			distance: r,
-			data: data,
-		};
-	});
-}
-
-async function calculateCircles(isochrones: any[]) {
-	return isochrones.map((data) => {
-		let c = circle([data.data.lng, data.data.lat], data.distance, {
-			// steps: 64,
-			units: 'kilometers'
-		});
-		c.bbox = bbox(c);
-		return c;
-	});
-}
-
-function contains(larger: any, smaller: any): boolean {
-	const bb1 = larger.bbox;
-	const bb2 = smaller.bbox;
-	return bb1._sw.lat <= bb2._sw.lat && bb1._sw.lng <= bb2._sw.lng
-	    && bb1._ne.lat >= bb2._ne.lat && bb1._ne.lng >= bb2._ne.lng;
-}
-
-async function removeContainedBoxes(boxes: any) {
-	// Sort by distance, descending
-	const t1 = Date.now();
-	boxes.sort((a: any, b: any) => b.distance - a.distance);
-	const t2 = Date.now();
-	console.log('sorted');
-	const isCoveredPromises = boxes.map(async (box: any, index: number) =>
-		boxes.slice(0, index).some((b: any) => contains(b, box))
-	);
-	const isCovered = await Promise.all(isCoveredPromises);
-	const t22 = Date.now();
-	const visibleBoxes = boxes.filter((box: any , index: number) => !isCovered[index]);
-	const t3 = Date.now();
-	console.log('Sorting took:', t2 - t1);
-	console.log('Tests took:', t22 - t2);
-	console.log('Filtering took:', t3 - t22);
-	return visibleBoxes;
-}
-
-// Implementation based on https://stackoverflow.com/a/75982694
-// Create union for smaller polygons first
-// Using a pipe like approach should place larger polygons at the end
-
-async function createUnion(d: UnionType[]) {
-	const u = d.filter(((p) => p !== undefined));
-	await sleep(0);
-	while (u.length > 1) {
-		await sleep(0);
-
-		const a = u.shift()!;
-		const b = u.shift()!;
-		const c = union(featureCollection([a, b]));
-		if (c) {
-			u.push(c);
-		}
-	}
-	return u.length == 1 ? u[0] : null;
 }
 
 function getTransformer(boundingBox: LngLatBounds, dimensions: number[]) {
@@ -238,9 +145,8 @@ async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: Circ
 	});
 }
 
-function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: any[], transform: (p: number[]) => number[]) {
-	rects.forEach((bx) => {
-		const b = bx.bbox;
+function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: LngLatBounds[], transform: (p: number[]) => number[]) {
+	rects.forEach((b) => {
 		ctx.save(); // Store canvas state
 
 		const min = transform([b._sw.lng, b._sw.lat]);
@@ -251,6 +157,36 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: any[], transfo
 		// Restore previous state on top
 		ctx.restore();
 	});
+}
+
+function setupWorker() {
+	if (shapeWorker === undefined) {
+		shapeWorker = new ShapeWorker();
+
+		shapeWorker.onmessage = (event) => {
+			const method = event.data.method;
+			if (method == 'update-shape') {
+				const shape = event.data.shape;
+				if (shape == 'rects') {
+					boxes = event.data.data;
+					console.log('boxes set');
+					self.postMessage({method: 'update-render-level', level: 0});
+				} else if (shape == 'circles') {
+					circles = event.data.data;
+					console.log('circles set');
+					self.postMessage({method: 'update-render-level', level: 1});
+				} else if (shape == 'geojson') {
+					const geometry = event.data.data;
+					self.postMessage({method: 'update-render-level', level: 2, geometry: geometry});
+				} else {
+					console.log(`Unknown shape '${shape}`);
+				}
+			} else {
+				console.log(`Unknown method '${method}'`);
+			}
+		};
+	}
+	return shapeWorker;
 }
 
 async function sleep(ms: number) {

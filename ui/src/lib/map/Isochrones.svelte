@@ -3,7 +3,7 @@
 	import maplibregl from 'maplibre-gl';
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
-	import WebWorker from '$lib/map/isochrones.ts?worker';
+	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 
 	export interface IsochronesPos {
 		lat: number;
@@ -90,7 +90,7 @@
 				data: $state.snapshot(isochronesData),
 				maxDuration: $state.snapshot(maxAllTime),
 				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-				maxRenderLevel: maxRenderMode,
+				// maxRenderLevel: maxRenderMode,
 				idx: 1,  // TODO Add ID to check responses
 			});
 
@@ -112,7 +112,7 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel < 2 ? 'visible' : 'none');
+		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel >= 0 && currentRenderLevel < 2 ? 'visible' : 'none');
 		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 ? 'visible' : 'none');
 	});
 
@@ -148,7 +148,9 @@
 
 		const nextLevel = Math.min(renderMode, availableRenderLevel);
 
-		if (nextLevel < 2) {
+		if (nextLevel < 0) {
+			currentRenderLevel = nextLevel;
+		} else if (nextLevel < 2) {
 			if (!canvasSource) {
 				canvasSource = setupLayers(map);
 				if (!canvasSource) {
@@ -220,11 +222,12 @@
 
 			worker.onmessage = (event) => {
 				const method = event.data.method;
-				if (method == 'dataUpdated') {
+				if (method == 'update-render-level') {
 					const level = event.data.level;
 					if (level == 2) {
-						polygons = event.data.polygons;
+						polygons = event.data.geometry;
 					}
+					console.log('TO RENDER:', level, availableRenderLevel, renderMode);
 					if (level > availableRenderLevel) {
 						availableRenderLevel = level;
 						if (availableRenderLevel <= renderMode) {
