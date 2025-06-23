@@ -69,6 +69,7 @@ async function createShapes() {
 		return;
 	}
 	working = true;
+	self.postMessage({method: 'update-working-state', data: true});
 	// if (queue.length == 0) {
 	// 	return;
 	// }
@@ -105,6 +106,7 @@ console.log("Total rects:", bboxes.length);
 	// 	queue.push(maxDepth);
 	// }
 	working = false;
+	self.postMessage({method: 'update-working-state', data: false});
 	createShapes();
 }
 

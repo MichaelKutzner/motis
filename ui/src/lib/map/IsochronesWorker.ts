@@ -12,6 +12,7 @@ let canvas: OffscreenCanvas | undefined = undefined;
 let boxes: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let shapeWorker: Worker | undefined = undefined;
+let workerWorking = false;
 
 interface IsochronesPos {
 	lat: number;
@@ -160,7 +161,12 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: LngLatBounds[]
 }
 
 function setupWorker() {
-	if (shapeWorker === undefined) {
+	if (shapeWorker === undefined || workerWorking) {
+		if (workerWorking) {
+			shapeWorker?.terminate();
+			console.log('Shape worker stopped');
+			workerWorking = false;
+		}
 		shapeWorker = new ShapeWorker();
 
 		shapeWorker.onmessage = (event) => {
@@ -181,6 +187,8 @@ function setupWorker() {
 				} else {
 					console.log(`Unknown shape '${shape}`);
 				}
+			} else if (method == 'update-working-state') {
+				workerWorking = event.data.data;
 			} else {
 				console.log(`Unknown method '${method}'`);
 			}
