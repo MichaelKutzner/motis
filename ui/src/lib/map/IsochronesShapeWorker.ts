@@ -64,7 +64,7 @@ function getMaxDistanceFunction(kilometersPerSecond: number, maxDuration: number
 }
 
 async function createShapes() {
-	console.log('Create triggered');
+	console.log('Create triggered', working, currentDepth, maxDepth);
 	if (working || currentDepth >= maxDepth) {
 		return;
 	}
@@ -96,8 +96,10 @@ console.log("Total rects:", bboxes.length);
 			circles = isochronesCircles;
 			self.postMessage({method: 'update-shape', shape: 'circles', data: circles});
 		} else if (currentDepth == 1) {
+			console.log('UNION START');
 			const geometry = await createUnion();
 			circleGeometry = geometry;
+			console.log('UNION END');
 			self.postMessage({method: 'update-shape', shape: 'geojson', data: geometry});
 		}
 		++currentDepth;
@@ -184,7 +186,7 @@ async function createUnion() {
 	}
 	console.log("Circles before:", circles.length);
 	// const queue = await circles.filter(((p) => p !== undefined));
-	const queue: UnionType[] = await circles;
+	const queue: UnionType[] = await circles.map((c) => c);
 	// await sleep(0);
 	while (queue.length > 1) {
 		// await sleep(0);

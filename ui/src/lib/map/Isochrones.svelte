@@ -49,10 +49,6 @@
 	let currentRenderLevel = $state(-1);
 	let availableRenderLevel = $state(-1);
 
-	let lastData: IsochronesPos[] | undefined = undefined;
-	let lastAllTime: number = maxAllTime;
-	let lastSpeed: number | undefined = undefined;
-
 	const kilometersPerSecond = $derived(
 		streetModes.includes('BIKE')
 			? 0.0038 // 3.8 meters per second
@@ -77,6 +73,11 @@
 
 	let worker: Worker | undefined = undefined;
 
+	let lastData: IsochronesPos[] = [];
+	let lastAllTime: number = maxAllTime;
+	// svelte-ignore state_referenced_locally
+	let lastSpeed: number | undefined = $state.snapshot(kilometersPerSecond);
+
 	$effect(() => {
 		if (!active) {
 			return;
@@ -84,7 +85,9 @@
 
 		const worker = setupWorker();
 
-		if (lastData != isochronesData || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+			console.log('TRIGGERING UPDATE:', lastData != isochronesData, lastAllTime != maxAllTime, lastSpeed != kilometersPerSecond)
+			console.log(lastAllTime, maxAllTime, lastSpeed, kilometersPerSecond, isochronesData);
 			worker.postMessage({
 				method: 'update-data',
 				data: $state.snapshot(isochronesData),
@@ -112,6 +115,7 @@
 		if (!map || !canvasSource) {
 			return;
 		}
+		console.log('Rendering level:', currentRenderLevel);
 		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel >= 0 && currentRenderLevel < 2 ? 'visible' : 'none');
 		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 ? 'visible' : 'none');
 	});
@@ -147,6 +151,7 @@
 		}
 
 		const nextLevel = Math.min(renderMode, availableRenderLevel);
+		console.log('Next level:', nextLevel, renderMode, availableRenderLevel);
 
 		if (nextLevel < 0) {
 			currentRenderLevel = nextLevel;
