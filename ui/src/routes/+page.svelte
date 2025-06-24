@@ -76,7 +76,8 @@
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
-	let last_selected_itinerary: Itinerary | undefined = undefined;
+	let lastSelectedItinerary: Itinerary | undefined = undefined;
+	let lastOneToAllQuery: OneToAllData | undefined = undefined;
 
 	let theme: 'light' | 'dark' =
 		(hasDark ? 'dark' : hasLight ? 'light' : undefined) ??
@@ -319,6 +320,10 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
+			if (lastOneToAllQuery == isochronesQuery) {
+				return;
+			}
+			lastOneToAllQuery = isochronesQuery;
 			clearTimeout(isochronesQueryTimeout);
 			isochronesQueryTimeout = setTimeout(() => {
 				oneToAll(isochronesQuery).then(
@@ -369,7 +374,7 @@
 	}
 
 	const flyToSelectedItinerary = () => {
-		if (last_selected_itinerary === page.state.selectedItinerary) {
+		if (lastSelectedItinerary === page.state.selectedItinerary) {
 			return;
 		}
 		if (page.state.selectedItinerary && map) {
@@ -390,7 +395,7 @@
 			};
 			map.flyTo({ ...map.cameraForBounds(box, { padding }) });
 		}
-		last_selected_itinerary = page.state.selectedItinerary;
+		lastSelectedItinerary = page.state.selectedItinerary;
 	};
 
 	$effect(flyToSelectedItinerary);
