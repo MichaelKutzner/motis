@@ -629,7 +629,7 @@
 	</div>
 
 	{#if showMap}
-		<RailViz {map} {bounds} {zoom} />
+		<RailViz {map} {bounds} {zoom} active={activeTab != 'isochrones'} />
 		<Isochrones
 			{map}
 			{bounds}

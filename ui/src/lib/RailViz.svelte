@@ -22,11 +22,13 @@
 	let {
 		map,
 		bounds,
-		zoom
+		zoom,
+		active
 	}: {
 		map: maplibregl.Map | undefined;
 		bounds: maplibregl.LngLatBoundsLike | undefined;
 		zoom: number;
+		active: boolean;
 	} = $props();
 
 	let colorMode = $state<'rt' | 'route'>('route');
@@ -240,6 +242,9 @@
 	let timer: number | undefined;
 	let overlay = $state.raw<MapboxOverlay>();
 	const updateRailviz = async () => {
+		if (!active) {
+			return;
+		}
 		await updateRailvizLayer();
 		clearTimeout(timer); // Ensure previous timer is cleared
 		timer = setTimeout(() => {
@@ -297,6 +302,12 @@
 			});
 		}
 	});
+
+	$effect(() => {
+		if (map) {
+			map.setLayoutProperty('trips', 'visibility', active ? 'visible' : 'none');
+		}
+	})
 
 	onDestroy(() => {
 		if (animation) {
