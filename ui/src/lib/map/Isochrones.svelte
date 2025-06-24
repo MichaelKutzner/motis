@@ -43,6 +43,7 @@
 	const name = 'isochrones-data';
 	const canvasName = `${name}-canvas`;
 	const geoJSONName = `${name}-geojson`;
+	const emptyGeometry: GeoJSON.GeoJSON = {"type":"Point","coordinates": [0,0]};
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
 	let polygons = $state<UnionType | undefined>(undefined);
@@ -87,8 +88,6 @@
 		const worker = setupWorker();
 
 		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
-			console.log('TRIGGERING UPDATE:', lastData != isochronesData, lastAllTime != maxAllTime, lastSpeed != kilometersPerSecond)
-			console.log(lastAllTime, maxAllTime, lastSpeed, kilometersPerSecond, isochronesData);
 			worker.postMessage({
 				method: 'update-data',
 				data: $state.snapshot(isochronesData),
@@ -116,7 +115,6 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		console.log('Rendering level:', currentRenderLevel);
 		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel >= 0 && currentRenderLevel < 2 ? 'visible' : 'none');
 		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 ? 'visible' : 'none');
 	});
@@ -140,8 +138,7 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		console.log('Polygons updating …', polygons !== undefined);
-		(map.getSource(geoJSONName) as GeoJSONSource).setData(polygons ?? '[]');
+		(map.getSource(geoJSONName) as GeoJSONSource).setData(polygons ?? emptyGeometry);
 	});
 
 	$effect(() => requestCanvasUpdate());
@@ -152,7 +149,6 @@
 		}
 
 		const nextLevel = Math.min(renderMode, availableRenderLevel);
-		console.log('Next level:', nextLevel, renderMode, availableRenderLevel);
 
 		if (nextLevel < 0) {
 			currentRenderLevel = nextLevel;
@@ -200,7 +196,7 @@
 
 		map.addSource(geoJSONName, {
 			type: 'geojson',
-			data: '[]',
+			data: emptyGeometry,
 		});
 		map.addLayer({
 			id: geoJSONName,
@@ -238,7 +234,6 @@
 					if (level == 2) {
 						polygons = event.data.geometry;
 					}
-					console.log('TO RENDER:', level, availableRenderLevel, renderMode);
 					if (level > availableRenderLevel) {
 						availableRenderLevel = level;
 						if (availableRenderLevel <= renderMode) {

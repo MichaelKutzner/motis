@@ -13,7 +13,6 @@ let dataIndex = 0;
 let boxes: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let shapeWorker: Worker | undefined = undefined;
-let workerWorking = false;
 
 interface IsochronesPos {
 	lat: number;
@@ -25,9 +24,7 @@ type CircleType = ReturnType<typeof circle>;
 type UnionType = ReturnType<typeof union>;
 
 self.onmessage = async function(event) {
-	console.log('Worker received data');
 	const method = event.data.method;
-	console.log('Method:', method);
 	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
 	} else if (method == 'update-data') {
@@ -40,7 +37,7 @@ self.onmessage = async function(event) {
 		// Unser previous results
 		boxes = undefined;
 		circles = undefined;
-		let worker = setupWorker();
+		let worker = setupWorker(true);
 		worker.postMessage({
 			method: 'set-data',
 			data: isochronesData,
@@ -51,11 +48,10 @@ self.onmessage = async function(event) {
 	} else if (method == 'set-render-depth') {
 		const depth = event.data.maxRenderLevel;
 		if (dataIndex > 0) {
-			let worker = setupWorker();
+			let worker = setupWorker(false);
 			worker.postMessage({method: 'update-depth', depth});
 		}
 	} else if (method == 'render-canvas') {
-		console.log('Render requested', boxes == undefined, circles == undefined);
 		if (!canvas) {
 			return;
 		}
@@ -63,8 +59,6 @@ self.onmessage = async function(event) {
 		const color = event.data.color;
 		const dimensions = event.data.dimensions;
 		const level = event.data.level;
-		console.log('Rendering level:', level);
-		console.log('Dims:', dimensions);
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
 		let ctx = canvas.getContext("2d");
@@ -165,13 +159,12 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: LngLatBounds[]
 	});
 }
 
-function setupWorker() {
-	if (shapeWorker === undefined || workerWorking) {
-		if (workerWorking) {
-			shapeWorker?.terminate();
-			console.log('Shape worker stopped');
-			workerWorking = false;
-		}
+function setupWorker(stopOld: boolean) {
+	if (stopOld) {
+		shapeWorker?.terminate();
+		shapeWorker = undefined;
+	}
+	if (shapeWorker === undefined) {
 		shapeWorker = new ShapeWorker();
 
 		shapeWorker.onmessage = (event) => {
@@ -185,11 +178,9 @@ function setupWorker() {
 				const shape = event.data.shape;
 				if (shape == 'rects') {
 					boxes = event.data.data;
-					console.log('boxes set');
 					self.postMessage({method: 'update-render-level', index: dataIndex, level: 0});
 				} else if (shape == 'circles') {
 					circles = event.data.data;
-					console.log('circles set');
 					self.postMessage({method: 'update-render-level', index: dataIndex, level: 1});
 				} else if (shape == 'geojson') {
 					const geometry = event.data.data;
@@ -197,16 +188,10 @@ function setupWorker() {
 				} else {
 					console.log(`Unknown shape '${shape}`);
 				}
-			} else if (method == 'update-working-state') {
-				workerWorking = event.data.data;
 			} else {
 				console.log(`Unknown method '${method}'`);
 			}
 		};
 	}
 	return shapeWorker;
-}
-
-async function sleep(ms: number) {
-	return new Promise(resolve => setTimeout(resolve, ms));
 }

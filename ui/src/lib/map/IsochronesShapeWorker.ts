@@ -27,10 +27,8 @@ let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
 
 self.onmessage = async function(event) {
-	console.log('Shape worker received data');
 	const method = event.data.method;
 	if (method == 'set-data') {
-console.log('DATA UPDATE', data, event.data.data);
 		data = event.data.data;
 		resetResults(event.data.index);
 // 	} else if (method == 'update-maxDistance') {
@@ -42,7 +40,6 @@ console.log('DATA UPDATE', data, event.data.data);
 
 		// createShapes();
 	} else if (method == 'update-depth') {
-console.log('DEPTH UPDATE');
 		// const maxDepth = event.data.depth;
 		maxDepth = event.data.depth;
 		// queue = [maxDepth];
@@ -69,12 +66,10 @@ function getMaxDistanceFunction(kilometersPerSecond: number, maxDuration: number
 async function createShapes() {
 	const index = dataIndex;
 	const isStale = () => index != dataIndex;
-	console.log('Create triggered', working, currentDepth, maxDepth, index);
 	if (working || currentDepth >= maxDepth) {
 		return;
 	}
 	working = true;
-	self.postMessage({method: 'update-working-state', data: true});
 	// if (queue.length == 0) {
 	// 	return;
 	// }
@@ -97,10 +92,9 @@ async function createShapes() {
 				}
 				rects = b;
 				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'rects', data: rects.map((r) => r.bbox)});
-	console.log("Total rects:", rects.length);
 				return await filterContained(rects).then((b2) => {
 					if (isStale()) {
-						console.log('Index got stale while computing rects');
+						console.log('Index got stale deleting covered rects');
 						return false;
 					}
 					rects = b2;
@@ -119,7 +113,6 @@ async function createShapes() {
 				return true;
 			});
 		} else if (currentDepth == 1) {
-			console.log('UNION START');
 			success = await createUnion().then((u) => {
 				if (isStale()) {
 					console.log('Index got stale while computing geometry');
@@ -129,7 +122,6 @@ async function createShapes() {
 				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'geojson', data: circleGeometry});
 				return true;
 			});
-			console.log('UNION END');
 		}
 	if (success) {
 		++currentDepth;
@@ -139,7 +131,6 @@ async function createShapes() {
 	// 	queue.push(maxDepth);
 	// }
 	working = false;
-	self.postMessage({method: 'update-working-state', data: false});
 	createShapes();
 }
 
@@ -178,7 +169,6 @@ async function filterContained(boxes: RectType[]) {
 	const t1 = Date.now();
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
 	const t2 = Date.now();
-	console.log('sorted');
 	const isCoveredPromises = boxes.map(async (box: any, index: number) =>
 		boxes.slice(0, index).some((b: any) => contains(b, box))
 	);
@@ -186,9 +176,6 @@ async function filterContained(boxes: RectType[]) {
 	const t22 = Date.now();
 	const visibleBoxes = boxes.filter((box: any , index: number) => !isCovered[index]);
 	const t3 = Date.now();
-	console.log('Sorting took:', t2 - t1);
-	console.log('Tests took:', t22 - t2);
-	console.log('Filtering took:', t3 - t22);
 	return visibleBoxes;
 }
 
@@ -215,7 +202,6 @@ async function createUnion() {
 	if (circles === undefined) {
 		return null;
 	}
-	console.log("Circles before:", circles.length);
 	// const queue = await circles.filter(((p) => p !== undefined));
 	const queue: UnionType[] = await circles.map((c) => c);
 	// await sleep(0);
@@ -229,6 +215,5 @@ async function createUnion() {
 			queue.push(c);
 		}
 	}
-	console.log("Circles after:", circles.length);
 	return queue.length == 1 ? queue[0] : null;
 }
