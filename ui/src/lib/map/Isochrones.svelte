@@ -77,6 +77,7 @@
 	let lastAllTime: number = maxAllTime;
 	// svelte-ignore state_referenced_locally
 	let lastSpeed: number | undefined = $state.snapshot(kilometersPerSecond);
+	let dataIndex = 0;
 
 	$effect(() => {
 		if (!active) {
@@ -94,7 +95,7 @@
 				maxDuration: $state.snapshot(maxAllTime),
 				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
 				// maxRenderLevel: maxRenderMode,
-				idx: 1,  // TODO Add ID to check responses
+				index: ++dataIndex,
 			});
 
 			lastData = isochronesData;
@@ -228,6 +229,11 @@
 			worker.onmessage = (event) => {
 				const method = event.data.method;
 				if (method == 'update-render-level') {
+					const index = event.data.index;
+					if (index < dataIndex) {
+						console.log('Got stale index from worker:', index, dataIndex);
+						return;
+					}
 					const level = event.data.level;
 					if (level == 2) {
 						polygons = event.data.geometry;

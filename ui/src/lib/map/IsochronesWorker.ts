@@ -9,6 +9,7 @@ import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
 
 let canvas: OffscreenCanvas | undefined = undefined;
 
+let dataIndex = 0;
 let boxes: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let shapeWorker: Worker | undefined = undefined;
@@ -34,7 +35,8 @@ self.onmessage = async function(event) {
 		const maxDuration = event.data.maxDuration;
 		// const maxRenderLevel = event.data.maxRenderLevel;
 		const kilometersPerSecond = event.data.kilometersPerSecond;
-		const idx = event.data.idx;
+		const index = event.data.index;
+		dataIndex = index;
 		// Unser previous results
 		boxes = undefined;
 		circles = undefined;
@@ -44,11 +46,14 @@ self.onmessage = async function(event) {
 			data: isochronesData,
 			speed:kilometersPerSecond,
 			maxDuration:maxDuration,
+			index: dataIndex,
 		});
 	} else if (method == 'set-render-depth') {
-		let worker = setupWorker();
 		const depth = event.data.maxRenderLevel;
-		worker.postMessage({method: 'update-depth', depth});
+		if (dataIndex > 0) {
+			let worker = setupWorker();
+			worker.postMessage({method: 'update-depth', depth});
+		}
 	} else if (method == 'render-canvas') {
 		console.log('Render requested', boxes == undefined, circles == undefined);
 		if (!canvas) {
@@ -172,18 +177,23 @@ function setupWorker() {
 		shapeWorker.onmessage = (event) => {
 			const method = event.data.method;
 			if (method == 'update-shape') {
+				const index = event.data.index;
+				if (index < dataIndex) {
+					console.log('Got stale index from shape worker:', index, dataIndex);
+					return;
+				}
 				const shape = event.data.shape;
 				if (shape == 'rects') {
 					boxes = event.data.data;
 					console.log('boxes set');
-					self.postMessage({method: 'update-render-level', level: 0});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 0});
 				} else if (shape == 'circles') {
 					circles = event.data.data;
 					console.log('circles set');
-					self.postMessage({method: 'update-render-level', level: 1});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 1});
 				} else if (shape == 'geojson') {
 					const geometry = event.data.data;
-					self.postMessage({method: 'update-render-level', level: 2, geometry: geometry});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 2, geometry: geometry});
 				} else {
 					console.log(`Unknown shape '${shape}`);
 				}

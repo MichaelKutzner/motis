@@ -14,6 +14,7 @@ type RectType = {bbox: LngLatBounds, distance: number, data: IsochronesPos};
 type CircleType = ReturnType<typeof circle>;
 type UnionType = ReturnType<typeof union>;
 
+let dataIndex = 0;
 let data: IsochronesPos[] | undefined = undefined;
 let rects: RectType[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
@@ -29,15 +30,16 @@ self.onmessage = async function(event) {
 	console.log('Shape worker received data');
 	const method = event.data.method;
 	if (method == 'set-data') {
-console.log('DATA UPDATE');
+console.log('DATA UPDATE', data, event.data.data);
 		data = event.data.data;
-		resetResults();
+		resetResults(event.data.index);
 // 	} else if (method == 'update-maxDistance') {
 // console.log('SPEED UPDATE');
 // 		resetResults();
 		const speed = event.data.speed;
 		const maxDuration = event.data.maxDuration;
 		maxDistance = getMaxDistanceFunction(speed, maxDuration);
+
 		// createShapes();
 	} else if (method == 'update-depth') {
 console.log('DEPTH UPDATE');
@@ -49,7 +51,8 @@ console.log('DEPTH UPDATE');
 	}
 }
 
-function resetResults() {
+function resetResults(index: number) {
+	dataIndex = index;
 	rects = undefined;
 	circles = undefined;
 	circleGeometry = undefined;
@@ -64,7 +67,9 @@ function getMaxDistanceFunction(kilometersPerSecond: number, maxDuration: number
 }
 
 async function createShapes() {
-	console.log('Create triggered', working, currentDepth, maxDepth);
+	const index = dataIndex;
+	const isStale = () => index != dataIndex;
+	console.log('Create triggered', working, currentDepth, maxDepth, index);
 	if (working || currentDepth >= maxDepth) {
 		return;
 	}
@@ -83,26 +88,52 @@ async function createShapes() {
 	// 	if (thisIter != iter) {
 	// 		return;
 	// 	}
+	let success = false;
 		if (currentDepth == -1) {
-			const bboxes = await createBboxes();
-			rects = bboxes;
-			self.postMessage({method: 'update-shape', shape: 'rects', data: rects.map((r) => r.bbox)});
-console.log("Total rects:", bboxes.length);
-			const notContainedBboxes = await filterContained(bboxes);
-			rects = notContainedBboxes;
-			self.postMessage({method: 'update-shape', shape: 'rects', data: rects.map((r) => r.bbox)});
+			success = await createBboxes().then(async (b) => {
+				if (isStale()) {
+					console.log('Index got stale while computing rects');
+					return false;
+				}
+				rects = b;
+				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'rects', data: rects.map((r) => r.bbox)});
+	console.log("Total rects:", rects.length);
+				return await filterContained(rects).then((b2) => {
+					if (isStale()) {
+						console.log('Index got stale while computing rects');
+						return false;
+					}
+					rects = b2;
+					self.postMessage({method: 'update-shape', index: dataIndex, shape: 'rects', data: rects.map((r) => r.bbox)});
+					return true;
+				});
+			});
 		} else if (currentDepth == 0) {
-			const isochronesCircles = await createCircles();
-			circles = isochronesCircles;
-			self.postMessage({method: 'update-shape', shape: 'circles', data: circles});
+			success = await createCircles().then((c) => {
+				if (isStale()) {
+					console.log('Index got stale while computing circles');
+					return false;
+				}
+				circles = c;
+				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'circles', data: circles});
+				return true;
+			});
 		} else if (currentDepth == 1) {
 			console.log('UNION START');
-			const geometry = await createUnion();
-			circleGeometry = geometry;
+			success = await createUnion().then((u) => {
+				if (isStale()) {
+					console.log('Index got stale while computing geometry');
+					return false;
+				}
+				circleGeometry = u;
+				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'geojson', data: circleGeometry});
+				return true;
+			});
 			console.log('UNION END');
-			self.postMessage({method: 'update-shape', shape: 'geojson', data: geometry});
 		}
+	if (success) {
 		++currentDepth;
+	}
 	// }
 	// if (queue.length == 0) {
 	// 	queue.push(maxDepth);
