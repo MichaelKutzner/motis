@@ -1,8 +1,8 @@
 import bbox from '@turf/bbox';
 import circle from '@turf/circle';
-import { featureCollection } from '@turf/helpers';
 import union from '@turf/union';
-import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+import { featureCollection } from '@turf/helpers';
+import { LngLatBounds } from 'maplibre-gl';
 
 interface IsochronesPos {
 	lat: number;
@@ -22,8 +22,6 @@ let circleGeometry: UnionType | undefined = undefined;
 let currentDepth = -1;
 let maxDepth = -1;
 let working = false;
-// let queue: number[] = [];
-// let iter = 0;
 let maxDistance = (_: IsochronesPos) => 0;
 
 self.onmessage = async function(event) {
@@ -31,19 +29,12 @@ self.onmessage = async function(event) {
 	if (method == 'set-data') {
 		data = event.data.data;
 		resetResults(event.data.index);
-// 	} else if (method == 'update-maxDistance') {
-// console.log('SPEED UPDATE');
-// 		resetResults();
 		const speed = event.data.speed;
 		const maxDuration = event.data.maxDuration;
 		maxDistance = getMaxDistanceFunction(speed, maxDuration);
 
-		// createShapes();
 	} else if (method == 'update-depth') {
-		// const maxDepth = event.data.depth;
 		maxDepth = event.data.depth;
-		// queue = [maxDepth];
-		// ++iter;
 		createShapes();
 	}
 }
@@ -55,7 +46,6 @@ function resetResults(index: number) {
 	circleGeometry = undefined;
 	currentDepth = -1;
 	maxDepth = -1;
-	// queue = [];
 	maxDistance = (_: IsochronesPos) => 0;
 }
 
@@ -70,19 +60,6 @@ async function createShapes() {
 		return;
 	}
 	working = true;
-	// if (queue.length == 0) {
-	// 	return;
-	// }
-	//
-	// const maxDepth = queue.pop();
-	// if (maxDepth === undefined || maxDepth <= currentDepth) {
-	// 	return;
-	// }
-	// const thisIter = iter;
-	// while (currentDepth < maxDepth) {
-	// 	if (thisIter != iter) {
-	// 		return;
-	// 	}
 	let success = false;
 		if (currentDepth == -1) {
 			success = await createBboxes().then(async (b) => {
@@ -126,10 +103,6 @@ async function createShapes() {
 	if (success) {
 		++currentDepth;
 	}
-	// }
-	// if (queue.length == 0) {
-	// 	queue.push(maxDepth);
-	// }
 	working = false;
 	createShapes();
 }
@@ -140,7 +113,7 @@ async function createBboxes() {
 	}
 	const promises = data.map(async (point) => {
 		const r = maxDistance(point);
-		// Compare geo::includes/geo/box.h
+		// Approximation: Compare geo::includes/geo/box.h
 		const d_lat = r / 111.0;
 		const min_lat_rad = point.lat * Math.PI / 180;
 		const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
@@ -166,16 +139,12 @@ function contains(larger: any, smaller: any): boolean {
 
 async function filterContained(boxes: RectType[]) {
 	// Sort by distance, descending
-	const t1 = Date.now();
 	boxes.sort((a: any, b: any) => b.distance - a.distance);
-	const t2 = Date.now();
 	const isCoveredPromises = boxes.map(async (box: any, index: number) =>
 		boxes.slice(0, index).some((b: any) => contains(b, box))
 	);
 	const isCovered = await Promise.all(isCoveredPromises);
-	const t22 = Date.now();
 	const visibleBoxes = boxes.filter((box: any , index: number) => !isCovered[index]);
-	const t3 = Date.now();
 	return visibleBoxes;
 }
 
@@ -202,12 +171,8 @@ async function createUnion() {
 	if (circles === undefined) {
 		return null;
 	}
-	// const queue = await circles.filter(((p) => p !== undefined));
 	const queue: UnionType[] = await circles.map((c) => c);
-	// await sleep(0);
 	while (queue.length > 1) {
-		// await sleep(0);
-
 		const a = queue.shift()!;
 		const b = queue.shift()!;
 		const c = await union(featureCollection([a, b]));

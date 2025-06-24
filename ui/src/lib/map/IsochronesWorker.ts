@@ -1,11 +1,6 @@
-import bbox from '@turf/bbox';
 import circle from '@turf/circle';
-import { featureCollection } from '@turf/helpers';
-import union from '@turf/union';
-import maplibregl, { CanvasSource, LngLatBounds, type LngLatBoundsLike, type Map } from 'maplibre-gl';
+import { LngLatBounds } from 'maplibre-gl';
 import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
-
-// const frameRate = 1_000 / 15;  // ≈ 15 frames per second
 
 let canvas: OffscreenCanvas | undefined = undefined;
 
@@ -14,14 +9,7 @@ let boxes: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let shapeWorker: Worker | undefined = undefined;
 
-interface IsochronesPos {
-	lat: number;
-	lng: number;
-	seconds: number;
-}
-
 type CircleType = ReturnType<typeof circle>;
-type UnionType = ReturnType<typeof union>;
 
 self.onmessage = async function(event) {
 	const method = event.data.method;
@@ -30,11 +18,9 @@ self.onmessage = async function(event) {
 	} else if (method == 'update-data') {
 		const isochronesData = event.data.data;
 		const maxDuration = event.data.maxDuration;
-		// const maxRenderLevel = event.data.maxRenderLevel;
 		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const index = event.data.index;
 		dataIndex = index;
-		// Unser previous results
 		boxes = undefined;
 		circles = undefined;
 		let worker = setupWorker(true);
@@ -111,7 +97,6 @@ function getIsVisible(boundingBox: LngLatBounds) {
 }
 
 async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (p: number[]) => number[], is_visible: (c: CircleType) => boolean, dimensions: number[]) {
-	let i = 0;
 	circles.filter(is_visible).forEach((c) => {
 		ctx.save(); // Store canvas state
 
@@ -164,6 +149,7 @@ function setupWorker(stopOld: boolean) {
 		shapeWorker?.terminate();
 		shapeWorker = undefined;
 	}
+
 	if (shapeWorker === undefined) {
 		shapeWorker = new ShapeWorker();
 

@@ -77,7 +77,7 @@
 	let lastData: IsochronesPos[] = [];
 	let lastAllTime: number = maxAllTime;
 	// svelte-ignore state_referenced_locally
-	let lastSpeed: number | undefined = $state.snapshot(kilometersPerSecond);
+	let lastSpeed: number | undefined = kilometersPerSecond;
 	let dataIndex = 0;
 
 	$effect(() => {
@@ -93,7 +93,6 @@
 				data: $state.snapshot(isochronesData),
 				maxDuration: $state.snapshot(maxAllTime),
 				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-				// maxRenderLevel: maxRenderMode,
 				index: ++dataIndex,
 			});
 
@@ -116,7 +115,7 @@
 			return;
 		}
 		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel >= 0 && currentRenderLevel < 2 ? 'visible' : 'none');
-		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 ? 'visible' : 'none');
+		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 && polygons ? 'visible' : 'none');
 	});
 
 	$effect(() => {
