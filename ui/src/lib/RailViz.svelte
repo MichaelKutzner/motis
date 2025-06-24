@@ -295,7 +295,7 @@
 	});
 
 	$effect(() => {
-		if (overlay && bounds && zoom && colorMode) {
+		if (active && overlay && bounds && zoom && colorMode) {
 			untrack(() => {
 				console.log(`updateRailviz: effect ${overlay} ${bounds} ${zoom} ${colorMode}`);
 				updateRailviz();
