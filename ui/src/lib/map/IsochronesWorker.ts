@@ -1,5 +1,7 @@
 import circle from '@turf/circle';
 import { LngLatBounds } from 'maplibre-gl';
+// import { type DisplayLevel } from '$lib/map/Isochrones.svelte';
+import { type DisplayLevel } from '$lib/map/IsochronesShared';
 import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
 
 let canvas: OffscreenCanvas | undefined = undefined;
@@ -32,7 +34,7 @@ self.onmessage = async function(event) {
 			index: dataIndex,
 		});
 	} else if (method == 'set-render-depth') {
-		const depth = event.data.maxRenderLevel;
+		const depth: DisplayLevel = event.data.maxRenderLevel;
 		if (dataIndex > 0) {
 			let worker = setupWorker(false);
 			worker.postMessage({method: 'update-depth', depth});
@@ -44,7 +46,7 @@ self.onmessage = async function(event) {
 		const boundingBox = event.data.boundingBox;
 		const color = event.data.color;
 		const dimensions = event.data.dimensions;
-		const level = event.data.level;
+		const level: DisplayLevel = event.data.level;
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
 		let ctx = canvas.getContext("2d");
@@ -57,10 +59,10 @@ self.onmessage = async function(event) {
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		if (level == 1 && circles) {
+		if (level == 'OverlayCircles' && circles) {
 			const isVisible = getIsVisible(boundingBox);
 			drawCircles(ctx, circles, transform, isVisible, dimensions);
-		} else if (level == 0 && boxes) {
+		} else if (level == 'OverlayRects' && boxes) {
 			drawRects(ctx, boxes, transform);
 		} else {
 			console.log(`Cannot render level ${level}`);
@@ -163,13 +165,13 @@ function setupWorker(stopOld: boolean) {
 				const shape = event.data.shape;
 				if (shape == 'rects') {
 					boxes = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 0});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OverlayRects'});
 				} else if (shape == 'circles') {
 					circles = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 1});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OverlayCircles'});
 				} else if (shape == 'geojson') {
 					const geometry = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 2, geometry: geometry});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'ApproximationCircles', geometry: geometry});
 				} else {
 					console.log(`Unknown shape '${shape}`);
 				}

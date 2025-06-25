@@ -52,7 +52,7 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
-	import Isochrones from '$lib/map/Isochrones.svelte';
+	import Isochrones, { type DisplayLevel } from '$lib/map/Isochrones.svelte';
 	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
@@ -215,8 +215,8 @@
 	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
-	let isochronesRenderMode = $state(2);
-	let isochronesMaxRenderMode = $state(2);
+	let isochronesRenderMode = $state('ApproximationCircles' as DisplayLevel);
+	let isochronesMaxRenderMode = $state('ApproximationCircles' as DisplayLevel);
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {

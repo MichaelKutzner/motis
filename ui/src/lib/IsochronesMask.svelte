@@ -8,6 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
 	import * as Select from '$lib/components/ui/select';
+	import { type DisplayLevel } from '$lib/map/Isochrones.svelte';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -61,8 +62,8 @@
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
-		renderMode: number;
-		maxRenderMode: number;
+		renderMode: DisplayLevel;
+		maxRenderMode: DisplayLevel;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -77,12 +78,12 @@
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	const renderLevels = new Map([
-		[0, t.isochrones.canvasRects],
-		[1, t.isochrones.canvasCircles],
-		[2, t.isochrones.geojsonCircles],
+		['OverlayRects' as DisplayLevel, t.isochrones.canvasRects],
+		['OverlayCircles' as DisplayLevel, t.isochrones.canvasCircles],
+		['ApproximationCircles' as DisplayLevel, t.isochrones.geojsonCircles],
 	]);
 	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
-		{value: id.toString(), label: label}
+		{value: id, label: label}
 	)).toArray();
 
 	let oneItems = $state<Array<Location>>([]);
@@ -118,7 +119,7 @@
 		<div>
 			{t.isochrones.displayLevel}
 		</div>
-		<Select.Root type="single" bind:value={() => renderMode.toString(), (v) => renderMode = parseInt(v)}>
+		<Select.Root type="single" bind:value={renderMode}>
 			<Select.Trigger class="overflow-hidden" aria-label=renderMode>
 				{renderLevels.get(renderMode)}
 			</Select.Trigger>
@@ -133,7 +134,7 @@
 		<div>
 			{t.isochrones.maxComputeLevel}
 		</div>
-		<Select.Root type="single" bind:value={() => maxRenderMode.toString(), (v) => maxRenderMode = parseInt(v)}>
+		<Select.Root type="single" bind:value={maxRenderMode}>
 			<Select.Trigger class="overflow-hidden" aria-label=maxRenderMode>
 				{renderLevels.get(maxRenderMode)}
 			</Select.Trigger>

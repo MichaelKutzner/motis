@@ -3,6 +3,8 @@ import circle from '@turf/circle';
 import union from '@turf/union';
 import { featureCollection } from '@turf/helpers';
 import { LngLatBounds } from 'maplibre-gl';
+// import { type DisplayLevel, isLess, nextDisplayLevel } from '$lib/map/Isochrones.svelte';
+import { type DisplayLevel, isLess, nextDisplayLevel } from '$lib/map/IsochronesShared';
 
 interface IsochronesPos {
 	lat: number;
@@ -19,8 +21,8 @@ let data: IsochronesPos[] | undefined = undefined;
 let rects: RectType[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let circleGeometry: UnionType | undefined = undefined;
-let currentDepth = -1;
-let maxDepth = -1;
+let currentDepth: DisplayLevel = 'None';
+let maxDepth: DisplayLevel = 'None';
 let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
 
@@ -44,8 +46,8 @@ function resetResults(index: number) {
 	rects = undefined;
 	circles = undefined;
 	circleGeometry = undefined;
-	currentDepth = -1;
-	maxDepth = -1;
+	currentDepth = 'None';
+	maxDepth = 'None';
 	maxDistance = (_: IsochronesPos) => 0;
 }
 
@@ -56,12 +58,12 @@ function getMaxDistanceFunction(kilometersPerSecond: number, maxDuration: number
 async function createShapes() {
 	const index = dataIndex;
 	const isStale = () => index != dataIndex;
-	if (working || currentDepth >= maxDepth) {
+	if (working || !isLess(currentDepth, maxDepth)) {
 		return;
 	}
 	working = true;
 	let success = false;
-		if (currentDepth == -1) {
+		if (currentDepth == 'None') {
 			success = await createBboxes().then(async (b) => {
 				if (isStale()) {
 					console.log('Index got stale while computing rects');
@@ -79,7 +81,7 @@ async function createShapes() {
 					return true;
 				});
 			});
-		} else if (currentDepth == 0) {
+		} else if (currentDepth == 'OverlayRects') {
 			success = await createCircles().then((c) => {
 				if (isStale()) {
 					console.log('Index got stale while computing circles');
@@ -89,7 +91,7 @@ async function createShapes() {
 				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'circles', data: circles});
 				return true;
 			});
-		} else if (currentDepth == 1) {
+		} else if (currentDepth == 'OverlayCircles') {
 			success = await createUnion().then((u) => {
 				if (isStale()) {
 					console.log('Index got stale while computing geometry');
@@ -101,7 +103,7 @@ async function createShapes() {
 			});
 		}
 	if (success) {
-		++currentDepth;
+		currentDepth = nextDisplayLevel(currentDepth);
 	}
 	working = false;
 	createShapes();

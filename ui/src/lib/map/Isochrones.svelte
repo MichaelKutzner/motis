@@ -1,3 +1,28 @@
+<script lang="ts" module>
+	const DisplayLevels = ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'] as const;
+	// const DisplayLevels: ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'] = ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'];
+	export type DisplayLevel = typeof DisplayLevels[number];
+	// export type DisplayLevel = ['None', 'OverlayRects', 'Overlay Circles', 'Approximation Circles'];
+	// const DisplayLevels =
+	// export type DisplayLevel = DisplayLevels;
+	export const nextDisplayLevel = (a: DisplayLevel) => DisplayLevels[Math.min(DisplayLevels.indexOf(a) + 1, DisplayLevels.length - 1)];
+	export const isLess = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels.indexOf(a) < DisplayLevels.indexOf(b);
+	// const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels[Math.min(DisplayLevels.indexOf(a), DisplayLevels.indexOf(b))];
+	// const x: DisplayLevel = 'None';
+	// export enum DisplayLevels {
+	// 	None = 0,
+	// 	OverlayRects = 1,
+	// 	OverlayCircles = 2,
+	// 	ApproximationCircles = 3,
+	// };
+	// export interface RenderOptions {
+	// 	displayLevel: DisplayLevel;
+	// 	maxComputeLevel: DisplayLevel;
+	// 	opacity: number;
+	// 	color: string;
+	// };
+</script>
+
 <script lang="ts">
 	import union from '@turf/union';
 	import maplibregl from 'maplibre-gl';
@@ -10,6 +35,9 @@
 		lng: number;
 		seconds: number;
 	}
+	const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => isLess(a, b) ? a : b;
+	const isCanvasLevel = (a: DisplayLevel) => a == 'OverlayRects' || a == 'OverlayCircles';
+	const isGeoJSONLevel = (a: DisplayLevel) => a == 'ApproximationCircles';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 	type UnionType = ReturnType<typeof union>;
@@ -34,8 +62,8 @@
 		wheelchair: boolean;
 		maxAllTime: number;
 		active: boolean;
-		renderMode: number;
-		maxRenderMode: number;
+		renderMode: DisplayLevel;
+		maxRenderMode: DisplayLevel;
 		color: string;
 		opacity: number;
 	} = $props();
@@ -47,8 +75,8 @@
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
 	let polygons = $state<UnionType | undefined>(undefined);
-	let currentRenderLevel = $state(-1);
-	let availableRenderLevel = $state(-1);
+	let currentRenderLevel = $state<DisplayLevel>('None');
+	let availableRenderLevel = $state<DisplayLevel>('None');
 
 	const kilometersPerSecond = $derived(
 		streetModes.includes('BIKE')
@@ -101,7 +129,7 @@
 			lastSpeed = kilometersPerSecond;
 
 			polygons = undefined;
-			availableRenderLevel = -1;
+			availableRenderLevel = 'None';
 		}
 
 		worker.postMessage({
@@ -114,8 +142,8 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setLayoutProperty(canvasName, 'visibility', active && currentRenderLevel >= 0 && currentRenderLevel < 2 ? 'visible' : 'none');
-		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel >= 2 && polygons ? 'visible' : 'none');
+		map.setLayoutProperty(canvasName, 'visibility', active && isCanvasLevel(currentRenderLevel) ? 'visible' : 'none');
+		map.setLayoutProperty(geoJSONName, 'visibility', active && isGeoJSONLevel(currentRenderLevel) && polygons ? 'visible' : 'none');
 	});
 
 	$effect(() => {
@@ -147,11 +175,11 @@
 			return;
 		}
 
-		const nextLevel = Math.min(renderMode, availableRenderLevel);
+		const nextLevel = minDisplayLevel(renderMode, availableRenderLevel);
 
-		if (nextLevel < 0) {
+		if (nextLevel == 'None') {
 			currentRenderLevel = nextLevel;
-		} else if (nextLevel < 2) {
+		} else if (isCanvasLevel(nextLevel)) {
 			if (!canvasSource) {
 				canvasSource = setupLayers(map);
 				if (!canvasSource) {
@@ -229,13 +257,13 @@
 						console.log('Got stale index from worker:', index, dataIndex);
 						return;
 					}
-					const level = event.data.level;
-					if (level == 2) {
+					const level: DisplayLevel = event.data.level;
+					if (level == 'ApproximationCircles') {
 						polygons = event.data.geometry;
 					}
-					if (level > availableRenderLevel) {
+					if (isLess(availableRenderLevel, level)) {
 						availableRenderLevel = level;
-						if (availableRenderLevel <= renderMode) {
+						if (!isLess(renderMode, availableRenderLevel)) {
 							requestCanvasUpdate();
 						}
 					}
