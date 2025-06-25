@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
 	import * as Select from '$lib/components/ui/select';
-	import { type DisplayLevel } from '$lib/map/Isochrones.svelte';
+	import { type DisplayLevel } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';

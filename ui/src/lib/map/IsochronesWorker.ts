@@ -1,6 +1,5 @@
 import circle from '@turf/circle';
 import { LngLatBounds } from 'maplibre-gl';
-// import { type DisplayLevel } from '$lib/map/Isochrones.svelte';
 import { type DisplayLevel } from '$lib/map/IsochronesShared';
 import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
 

@@ -52,8 +52,8 @@
 	import { updateStartDest } from '$lib/updateStartDest';
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
-	import Isochrones, { type DisplayLevel } from '$lib/map/Isochrones.svelte';
-	import { type IsochronesPos } from '$lib/map/Isochrones.svelte';
+	import Isochrones from '$lib/map/Isochrones.svelte';
+	import { type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,

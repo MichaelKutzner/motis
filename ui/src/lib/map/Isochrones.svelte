@@ -1,43 +1,10 @@
-<script lang="ts" module>
-	const DisplayLevels = ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'] as const;
-	// const DisplayLevels: ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'] = ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'];
-	export type DisplayLevel = typeof DisplayLevels[number];
-	// export type DisplayLevel = ['None', 'OverlayRects', 'Overlay Circles', 'Approximation Circles'];
-	// const DisplayLevels =
-	// export type DisplayLevel = DisplayLevels;
-	export const nextDisplayLevel = (a: DisplayLevel) => DisplayLevels[Math.min(DisplayLevels.indexOf(a) + 1, DisplayLevels.length - 1)];
-	export const isLess = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels.indexOf(a) < DisplayLevels.indexOf(b);
-	// const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels[Math.min(DisplayLevels.indexOf(a), DisplayLevels.indexOf(b))];
-	// const x: DisplayLevel = 'None';
-	// export enum DisplayLevels {
-	// 	None = 0,
-	// 	OverlayRects = 1,
-	// 	OverlayCircles = 2,
-	// 	ApproximationCircles = 3,
-	// };
-	// export interface RenderOptions {
-	// 	displayLevel: DisplayLevel;
-	// 	maxComputeLevel: DisplayLevel;
-	// 	opacity: number;
-	// 	color: string;
-	// };
-</script>
-
 <script lang="ts">
 	import union from '@turf/union';
 	import maplibregl from 'maplibre-gl';
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
-
-	export interface IsochronesPos {
-		lat: number;
-		lng: number;
-		seconds: number;
-	}
-	const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => isLess(a, b) ? a : b;
-	const isCanvasLevel = (a: DisplayLevel) => a == 'OverlayRects' || a == 'OverlayCircles';
-	const isGeoJSONLevel = (a: DisplayLevel) => a == 'ApproximationCircles';
+	import { isCanvasLevel, isGeoJSONLevel, isLess, minDisplayLevel, type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 	type UnionType = ReturnType<typeof union>;

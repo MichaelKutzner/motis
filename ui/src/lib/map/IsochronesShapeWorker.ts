@@ -3,7 +3,6 @@ import circle from '@turf/circle';
 import union from '@turf/union';
 import { featureCollection } from '@turf/helpers';
 import { LngLatBounds } from 'maplibre-gl';
-// import { type DisplayLevel, isLess, nextDisplayLevel } from '$lib/map/Isochrones.svelte';
 import { type DisplayLevel, isLess, nextDisplayLevel } from '$lib/map/IsochronesShared';
 
 interface IsochronesPos {
