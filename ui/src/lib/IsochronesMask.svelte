@@ -77,9 +77,9 @@
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	const renderLevels = new Map([
-		[0, 'Simple approximation (fast)'],
-		[1, 'Basic approximation (slow rendering)'],
-		[2, 'Render approximation (long computation)'],
+		[0, t.isochrones.canvasRects],
+		[1, t.isochrones.canvasCircles],
+		[2, t.isochrones.geojsonCircles],
 	]);
 	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
 		{value: id.toString(), label: label}
@@ -116,7 +116,7 @@
 {#snippet additionalComponents()}
 	<div class="grid grid-cols-4 items-center gap-2">
 		<div>
-			Preferred render level
+			{t.isochrones.displayLevel}
 		</div>
 		<Select.Root type="single" bind:value={() => renderMode.toString(), (v) => renderMode = parseInt(v)}>
 			<Select.Trigger class="overflow-hidden" aria-label=renderMode>
@@ -131,7 +131,7 @@
 			</Select.Content>
 		</Select.Root>
 		<div>
-			Maximum render level
+			{t.isochrones.maxComputeLevel}
 		</div>
 		<Select.Root type="single" bind:value={() => maxRenderMode.toString(), (v) => maxRenderMode = parseInt(v)}>
 			<Select.Trigger class="overflow-hidden" aria-label=maxRenderMode>
@@ -148,7 +148,7 @@
 	</div>
 	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
 		<div class="text-sm">
-			{t.isochronesStyling}
+			{t.isochrones.styling}
 		</div>
 		<Slider.Root
 			type="single"

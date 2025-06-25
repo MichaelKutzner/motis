@@ -475,7 +475,7 @@
 					<Tabs.List class="grid grid-cols-3">
 						<Tabs.Trigger value="connections">{t.connections}</Tabs.Trigger>
 						<Tabs.Trigger value="departures">{t.departures}</Tabs.Trigger>
-						<Tabs.Trigger value="isochrones">{t.isochrones}</Tabs.Trigger>
+						<Tabs.Trigger value="isochrones">{t.isochrones.title}</Tabs.Trigger>
 					</Tabs.List>
 					<Tabs.Content value="connections">
 						<Card class="overflow-y-auto overflow-x-hidden bg-background rounded-lg">
