@@ -43,7 +43,7 @@
 	const name = 'isochrones-data';
 	const canvasName = `${name}-canvas`;
 	const geoJSONName = `${name}-geojson`;
-	const emptyGeometry: GeoJSON.GeoJSON = {"type":"Point","coordinates": [0,0]};
+	const emptyGeometry: GeoJSON.GeoJSON = {"type":"LineString","coordinates": []};
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
 	let polygons = $state<UnionType | undefined>(undefined);
