@@ -305,7 +305,11 @@
 
 	$effect(() => {
 		if (map) {
-			map.setLayoutProperty('trips', 'visibility', active ? 'visible' : 'none');
+			// Evaluate before 'if', as state might not be tracked otherwise
+			const visibility = active ? 'visible' : 'none';
+			if (map?.getLayer('trips')) {
+				map.setLayoutProperty('trips', 'visibility', visibility);
+			}
 		}
 	})
 
