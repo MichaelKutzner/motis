@@ -55,7 +55,6 @@ self.onmessage = async function(event) {
 		const transform = getTransformer(boundingBox, dimensions);
 
 		ctx.fillStyle = color;
-		ctx.fillStyle = 'magenta';
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
 		if (level == 1 && circles) {

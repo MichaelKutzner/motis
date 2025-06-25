@@ -171,7 +171,7 @@
 				level: currentRenderLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions: viewport,
-				color: color,
+				color: currentRenderLevel == renderMode ? color : "magenta",
 			});
 		} else {
 			currentRenderLevel = nextLevel;
