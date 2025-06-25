@@ -4,7 +4,7 @@
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
-	import { isCanvasLevel, isGeoJSONLevel, isLess, minDisplayLevel, type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
+	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 	type UnionType = ReturnType<typeof union>;
@@ -42,8 +42,8 @@
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
 	let polygons = $state<UnionType | undefined>(undefined);
-	let currentRenderLevel = $state<DisplayLevel>('None');
-	let availableRenderLevel = $state<DisplayLevel>('None');
+	let currentRenderLevel = $state<DisplayLevel>('NONE');
+	let availableRenderLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
 		streetModes.includes('BIKE')
@@ -96,7 +96,7 @@
 			lastSpeed = kilometersPerSecond;
 
 			polygons = undefined;
-			availableRenderLevel = 'None';
+			availableRenderLevel = 'NONE';
 		}
 
 		worker.postMessage({
@@ -110,7 +110,7 @@
 			return;
 		}
 		map.setLayoutProperty(canvasName, 'visibility', active && isCanvasLevel(currentRenderLevel) ? 'visible' : 'none');
-		map.setLayoutProperty(geoJSONName, 'visibility', active && isGeoJSONLevel(currentRenderLevel) && polygons ? 'visible' : 'none');
+		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
 	});
 
 	$effect(() => {
@@ -144,7 +144,7 @@
 
 		const nextLevel = minDisplayLevel(renderMode, availableRenderLevel);
 
-		if (nextLevel == 'None') {
+		if (nextLevel == 'NONE') {
 			currentRenderLevel = nextLevel;
 		} else if (isCanvasLevel(nextLevel)) {
 			if (!canvasSource) {
@@ -225,7 +225,7 @@
 						return;
 					}
 					const level: DisplayLevel = event.data.level;
-					if (level == 'ApproximationCircles') {
+					if (level == 'GEOMETRY_CIRCLES') {
 						polygons = event.data.geometry;
 					}
 					if (isLess(availableRenderLevel, level)) {

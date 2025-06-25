@@ -58,10 +58,10 @@ self.onmessage = async function(event) {
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		if (level == 'OverlayCircles' && circles) {
+		if (level == 'OVERLAY_CIRCLES' && circles) {
 			const isVisible = getIsVisible(boundingBox);
 			drawCircles(ctx, circles, transform, isVisible, dimensions);
-		} else if (level == 'OverlayRects' && boxes) {
+		} else if (level == 'OVERLAY_RECTS' && boxes) {
 			drawRects(ctx, boxes, transform);
 		} else {
 			console.log(`Cannot render level ${level}`);
@@ -164,13 +164,13 @@ function setupWorker(stopOld: boolean) {
 				const shape = event.data.shape;
 				if (shape == 'rects') {
 					boxes = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OverlayRects'});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OVERLAY_RECTS'});
 				} else if (shape == 'circles') {
 					circles = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OverlayCircles'});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OVERLAY_CIRCLES'});
 				} else if (shape == 'geojson') {
 					const geometry = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'ApproximationCircles', geometry: geometry});
+					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'GEOMETRY_CIRCLES', geometry: geometry});
 				} else {
 					console.log(`Unknown shape '${shape}`);
 				}

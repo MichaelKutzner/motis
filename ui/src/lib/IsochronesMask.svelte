@@ -78,9 +78,9 @@
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
 	const renderLevels = new Map([
-		['OverlayRects' as DisplayLevel, t.isochrones.canvasRects],
-		['OverlayCircles' as DisplayLevel, t.isochrones.canvasCircles],
-		['ApproximationCircles' as DisplayLevel, t.isochrones.geojsonCircles],
+		['OVERLAY_RECTS' as DisplayLevel, t.isochrones.canvasRects],
+		['OVERLAY_CIRCLES' as DisplayLevel, t.isochrones.canvasCircles],
+		['GEOMETRY_CIRCLES' as DisplayLevel, t.isochrones.geojsonCircles],
 	]);
 	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
 		{value: id, label: label}

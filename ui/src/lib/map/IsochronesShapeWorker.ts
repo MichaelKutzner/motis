@@ -20,8 +20,8 @@ let data: IsochronesPos[] | undefined = undefined;
 let rects: RectType[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let circleGeometry: UnionType | undefined = undefined;
-let currentDepth: DisplayLevel = 'None';
-let maxDepth: DisplayLevel = 'None';
+let currentDepth: DisplayLevel = 'NONE';
+let maxDepth: DisplayLevel = 'NONE';
 let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
 
@@ -45,8 +45,8 @@ function resetResults(index: number) {
 	rects = undefined;
 	circles = undefined;
 	circleGeometry = undefined;
-	currentDepth = 'None';
-	maxDepth = 'None';
+	currentDepth = 'NONE';
+	maxDepth = 'NONE';
 	maxDistance = (_: IsochronesPos) => 0;
 }
 
@@ -62,7 +62,7 @@ async function createShapes() {
 	}
 	working = true;
 	let success = false;
-		if (currentDepth == 'None') {
+		if (currentDepth == 'NONE') {
 			success = await createBboxes().then(async (b) => {
 				if (isStale()) {
 					console.log('Index got stale while computing rects');
@@ -80,7 +80,7 @@ async function createShapes() {
 					return true;
 				});
 			});
-		} else if (currentDepth == 'OverlayRects') {
+		} else if (currentDepth == 'OVERLAY_RECTS') {
 			success = await createCircles().then((c) => {
 				if (isStale()) {
 					console.log('Index got stale while computing circles');
@@ -90,7 +90,7 @@ async function createShapes() {
 				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'circles', data: circles});
 				return true;
 			});
-		} else if (currentDepth == 'OverlayCircles') {
+		} else if (currentDepth == 'OVERLAY_CIRCLES') {
 			success = await createUnion().then((u) => {
 				if (isStale()) {
 					console.log('Index got stale while computing geometry');

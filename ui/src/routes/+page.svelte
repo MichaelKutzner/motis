@@ -215,8 +215,8 @@
 	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
-	let isochronesRenderMode = $state('ApproximationCircles' as DisplayLevel);
-	let isochronesMaxRenderMode = $state('ApproximationCircles' as DisplayLevel);
+	let isochronesRenderMode = $state('GEOMETRY_CIRCLES' as DisplayLevel);
+	let isochronesMaxRenderMode = $state('GEOMETRY_CIRCLES' as DisplayLevel);
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {

@@ -1,4 +1,4 @@
-const DisplayLevels = ['None', 'OverlayRects', 'OverlayCircles', 'ApproximationCircles'] as const;
+const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIRCLES'] as const;
 
 export type DisplayLevel = typeof DisplayLevels[number];
 
@@ -13,5 +13,4 @@ export const nextDisplayLevel = (a: DisplayLevel) => DisplayLevels[Math.min(Disp
 export const isLess = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels.indexOf(a) < DisplayLevels.indexOf(b);
 export const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => isLess(a, b) ? a : b;
 
-export const isCanvasLevel = (a: DisplayLevel) => a == 'OverlayRects' || a == 'OverlayCircles';
-export const isGeoJSONLevel = (a: DisplayLevel) => a == 'ApproximationCircles';
+export const isCanvasLevel = (a: DisplayLevel) => a == 'OVERLAY_RECTS' || a == 'OVERLAY_CIRCLES';
