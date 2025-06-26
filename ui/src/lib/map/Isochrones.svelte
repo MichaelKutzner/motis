@@ -1,13 +1,12 @@
 <script lang="ts">
-	import union from '@turf/union';
 	import maplibregl from 'maplibre-gl';
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
-	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
+	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry , type IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { WorkerMessage } from './IsochronesWorker';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
-	type UnionType = ReturnType<typeof union>;
 
 	let {
 		map,
@@ -41,7 +40,7 @@
 	const emptyGeometry: GeoJSON.GeoJSON = {"type":"LineString","coordinates": []};
 	let canvas: HTMLCanvasElement | undefined = undefined;
 	let canvasSource = $state<CanvasSource | undefined>(undefined);
-	let polygons = $state<UnionType | undefined>(undefined);
+	let polygons = $state<Geometry | undefined>(undefined);
 	let currentRenderLevel = $state<DisplayLevel>('NONE');
 	let availableRenderLevel = $state<DisplayLevel>('NONE');
 
@@ -216,26 +215,28 @@
 				canvas: renderCanvas,
 			}, [renderCanvas]);
 
-			worker.onmessage = (event) => {
+			worker.onmessage = (event: {data: WorkerMessage}) => {
 				const method = event.data.method;
-				if (method == 'update-render-level') {
-					const index = event.data.index;
-					if (index < dataIndex) {
-						console.log('Got stale index from worker:', index, dataIndex);
-						return;
-					}
-					const level: DisplayLevel = event.data.level;
-					if (level == 'GEOMETRY_CIRCLES') {
-						polygons = event.data.geometry;
-					}
-					if (isLess(availableRenderLevel, level)) {
-						availableRenderLevel = level;
-						if (!isLess(renderMode, availableRenderLevel)) {
-							requestCanvasUpdate();
+				switch (method) {
+					case 'update-render-level':
+						const index = event.data.index;
+						if (index < dataIndex) {
+							console.log('Got stale index from worker:', index, dataIndex);
+							return;
 						}
-					}
-				} else {
-					console.log(`Unknown method '${method}'`);
+						const level: DisplayLevel = event.data.level;
+						if (level == 'GEOMETRY_CIRCLES') {
+							polygons = event.data.geometry;
+						}
+						if (isLess(availableRenderLevel, level)) {
+							availableRenderLevel = level;
+							if (!isLess(renderMode, availableRenderLevel)) {
+								requestCanvasUpdate();
+							}
+						}
+						break;
+					default:
+						console.log(`Unknown method '${method}'`);
 				}
 			};
 		}

@@ -3,23 +3,18 @@ import circle from '@turf/circle';
 import union from '@turf/union';
 import { featureCollection } from '@turf/helpers';
 import { LngLatBounds } from 'maplibre-gl';
-import { type DisplayLevel, isLess, nextDisplayLevel } from '$lib/map/IsochronesShared';
-
-interface IsochronesPos {
-	lat: number;
-	lng: number;
-	seconds: number;
-}
+import { isLess, nextDisplayLevel, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
 
 type RectType = {bbox: LngLatBounds, distance: number, data: IsochronesPos};
 type CircleType = ReturnType<typeof circle>;
-type UnionType = ReturnType<typeof union>;
+export type UpdateMessage = {level: 'OVERLAY_RECTS', data: LngLatBounds[]} | {level: 'OVERLAY_CIRCLES', data: CircleType[]} | {level: 'GEOMETRY_CIRCLES', data: Geometry | undefined};
+export type ShapeMessage = {method: 'update-shape', index: number} & UpdateMessage;
 
 let dataIndex = 0;
 let data: IsochronesPos[] | undefined = undefined;
 let rects: RectType[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
-let circleGeometry: UnionType | undefined = undefined;
+let circleGeometry: Geometry | undefined = undefined;
 let currentDepth: DisplayLevel = 'NONE';
 let maxDepth: DisplayLevel = 'NONE';
 let working = false;
@@ -62,45 +57,51 @@ async function createShapes() {
 	}
 	working = true;
 	let success = false;
-		if (currentDepth == 'NONE') {
+	switch (currentDepth) {
+		case 'NONE':
 			success = await createBboxes().then(async (b) => {
 				if (isStale()) {
 					console.log('Index got stale while computing rects');
 					return false;
 				}
 				rects = b;
-				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'rects', data: rects.map((r) => r.bbox)});
+				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.bbox)} as ShapeMessage);
 				return await filterContained(rects).then((b2) => {
 					if (isStale()) {
 						console.log('Index got stale deleting covered rects');
 						return false;
 					}
 					rects = b2;
-					self.postMessage({method: 'update-shape', index: dataIndex, shape: 'rects', data: rects.map((r) => r.bbox)});
+					self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.bbox)} as ShapeMessage);
 					return true;
 				});
 			});
-		} else if (currentDepth == 'OVERLAY_RECTS') {
+			break;
+		case 'OVERLAY_RECTS':
 			success = await createCircles().then((c) => {
 				if (isStale()) {
 					console.log('Index got stale while computing circles');
 					return false;
 				}
 				circles = c;
-				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'circles', data: circles});
+				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_CIRCLES', data: circles} as ShapeMessage);
 				return true;
 			});
-		} else if (currentDepth == 'OVERLAY_CIRCLES') {
+			break;
+		case 'OVERLAY_CIRCLES':
 			success = await createUnion().then((u) => {
 				if (isStale()) {
 					console.log('Index got stale while computing geometry');
 					return false;
 				}
 				circleGeometry = u;
-				self.postMessage({method: 'update-shape', index: dataIndex, shape: 'geojson', data: circleGeometry});
+				self.postMessage({method: 'update-shape', index: dataIndex, level: 'GEOMETRY_CIRCLES', data: circleGeometry} as ShapeMessage);
 				return true;
 			});
-		}
+			break;
+		default:
+			console.log(`Unexpected level '${currentDepth}'`)
+	}
 	if (success) {
 		currentDepth = nextDisplayLevel(currentDepth);
 	}
@@ -170,9 +171,9 @@ async function createCircles() {
 
 async function createUnion() {
 	if (circles === undefined) {
-		return null;
+		return undefined;
 	}
-	const queue: UnionType[] = await circles.map((c) => c);
+	const queue: Geometry[] = await circles.map((c) => c);
 	while (queue.length > 1) {
 		const a = queue.shift()!;
 		const b = queue.shift()!;
@@ -181,5 +182,5 @@ async function createUnion() {
 			queue.push(c);
 		}
 	}
-	return queue.length == 1 ? queue[0] : null;
+	return queue.length == 1 ? queue[0] : undefined;
 }

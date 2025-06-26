@@ -1,7 +1,10 @@
 import circle from '@turf/circle';
 import { LngLatBounds } from 'maplibre-gl';
-import { type DisplayLevel } from '$lib/map/IsochronesShared';
+import type { DisplayLevel,Geometry } from '$lib/map/IsochronesShared';
 import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
+import type { ShapeMessage, UpdateMessage } from './IsochronesShapeWorker';
+
+export type WorkerMessage = {method: 'update-render-level', level: DisplayLevel, geometry?: Geometry | undefined, index: number};
 
 let canvas: OffscreenCanvas | undefined = undefined;
 
@@ -153,29 +156,35 @@ function setupWorker(stopOld: boolean) {
 	if (shapeWorker === undefined) {
 		shapeWorker = new ShapeWorker();
 
-		shapeWorker.onmessage = (event) => {
+		shapeWorker.onmessage = (event: {data: ShapeMessage}) => {
 			const method = event.data.method;
-			if (method == 'update-shape') {
-				const index = event.data.index;
-				if (index < dataIndex) {
-					console.log('Got stale index from shape worker:', index, dataIndex);
-					return;
-				}
-				const shape = event.data.shape;
-				if (shape == 'rects') {
-					boxes = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OVERLAY_RECTS'});
-				} else if (shape == 'circles') {
-					circles = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'OVERLAY_CIRCLES'});
-				} else if (shape == 'geojson') {
-					const geometry = event.data.data;
-					self.postMessage({method: 'update-render-level', index: dataIndex, level: 'GEOMETRY_CIRCLES', geometry: geometry});
-				} else {
-					console.log(`Unknown shape '${shape}`);
-				}
-			} else {
-				console.log(`Unknown method '${method}'`);
+			switch (method) {
+				case 'update-shape':
+					const index = event.data.index;
+					if (index < dataIndex) {
+						console.log('Got stale index from shape worker:', index, dataIndex);
+						return;
+					}
+					const msg: UpdateMessage = event.data;
+					switch (msg.level) {
+						case 'OVERLAY_RECTS':
+							boxes = msg.data;
+							self.postMessage({method: 'update-render-level', index: dataIndex, level: msg.level} as WorkerMessage);
+							break;
+						case 'OVERLAY_CIRCLES':
+							circles = msg.data;
+							self.postMessage({method: 'update-render-level', index: dataIndex, level: msg.level} as WorkerMessage);
+							break;
+						case 'GEOMETRY_CIRCLES':
+							const geometry = msg.data;
+							self.postMessage({method: 'update-render-level', index: dataIndex, level: msg.level, geometry: geometry} as WorkerMessage);
+							break;
+						default:
+							console.log(`Unknown message '${msg}`);
+					}
+					break;
+				default:
+					console.log(`Unknown method '${method}'`);
 			}
 		};
 	}

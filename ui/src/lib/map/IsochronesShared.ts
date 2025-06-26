@@ -1,6 +1,9 @@
+import type { Feature, GeoJsonProperties, MultiPolygon, Polygon } from 'geojson';
+
 const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIRCLES'] as const;
 
 export type DisplayLevel = typeof DisplayLevels[number];
+export type Geometry = Feature<Polygon | MultiPolygon, GeoJsonProperties>;
 
 export interface IsochronesPos {
 	lat: number;
