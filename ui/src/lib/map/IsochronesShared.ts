@@ -5,6 +5,12 @@ const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIR
 export type DisplayLevel = typeof DisplayLevels[number];
 export type Geometry = Feature<Polygon | MultiPolygon, GeoJsonProperties>;
 
+export interface IsochronesOptions {
+	renderMode: DisplayLevel;
+	maxRenderMode: DisplayLevel;
+	color: string;
+	opacity: number;
+}
 export interface IsochronesPos {
 	lat: number;
 	lng: number;

@@ -53,7 +53,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
-	import { type DisplayLevel, type IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,
@@ -207,16 +207,14 @@
 		urlParams?.get('ignoreDirectRentalReturnConstraints') == 'true'
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
-	let isochronesColor = $state<string>(
-		urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor
-	);
-	let isochronesOpacity = $state<number>(
-		parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
-	);
 
 	let isochronesData = $state<IsochronesPos[]>([]);
-	let isochronesRenderMode = $state('GEOMETRY_CIRCLES' as DisplayLevel);
-	let isochronesMaxRenderMode = $state('GEOMETRY_CIRCLES' as DisplayLevel);
+	let isochronesOptions = $state<IsochronesOptions>({
+		renderMode: 'GEOMETRY_CIRCLES',
+		maxRenderMode: 'GEOMETRY_CIRCLES',
+		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
+		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
+	});
 
 	const toPlaceString = (l: Location) => {
 		if (l.match?.type === 'STOP') {
@@ -350,8 +348,8 @@
 						...q,
 						...(q.one == one.label ? {} : { oneName: one.label }),
 						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor,
-						isochronesOpacity
+						isochronesColor: isochronesOptions.color,
+						isochronesOpacity: isochronesOptions.opacity,
 					},
 					{},
 					true
@@ -529,10 +527,7 @@
 								bind:elevationCosts
 								bind:ignorePreTransitRentalReturnConstraints
 								bind:ignorePostTransitRentalReturnConstraints
-								bind:renderMode={isochronesRenderMode}
-								bind:maxRenderMode={isochronesMaxRenderMode}
-								bind:color={isochronesColor}
-								bind:opacity={isochronesOpacity}
+								bind:options={isochronesOptions}
 							/>
 						</Card>
 					</Tabs.Content>
@@ -643,10 +638,7 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
-			renderMode={isochronesRenderMode}
-			maxRenderMode={isochronesMaxRenderMode}
-			color={isochronesColor}
-			opacity={isochronesOpacity}
+			options={isochronesOptions}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />

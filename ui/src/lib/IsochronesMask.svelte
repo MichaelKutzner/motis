@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
 	import * as Select from '$lib/components/ui/select';
-	import { type DisplayLevel } from '$lib/map/IsochronesShared';
+	import type { DisplayLevel, IsochronesOptions} from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -39,10 +39,7 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		renderMode = $bindable(),
-		maxRenderMode = $bindable(),
-		color = $bindable(),
-		opacity = $bindable()
+		options = $bindable(),
 	}: {
 		one: Location;
 		maxTravelTime: number;
@@ -62,10 +59,7 @@
 		elevationCosts: ElevationCosts;
 		ignorePreTransitRentalReturnConstraints: boolean;
 		ignorePostTransitRentalReturnConstraints: boolean;
-		renderMode: DisplayLevel;
-		maxRenderMode: DisplayLevel;
-		color: string;
-		opacity: number;
+		options: IsochronesOptions;
 	} = $props();
 
 	const maxSupportedTransfers = 14;
@@ -119,9 +113,9 @@
 		<div>
 			{t.isochrones.displayLevel}
 		</div>
-		<Select.Root type="single" bind:value={renderMode}>
+		<Select.Root type="single" bind:value={options.renderMode}>
 			<Select.Trigger class="overflow-hidden" aria-label=renderMode>
-				{renderLevels.get(renderMode)}
+				{renderLevels.get(options.renderMode)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
 				{#each possibleRenderLevels as mode, i (i + mode.value)}
@@ -134,9 +128,9 @@
 		<div>
 			{t.isochrones.maxComputeLevel}
 		</div>
-		<Select.Root type="single" bind:value={maxRenderMode}>
+		<Select.Root type="single" bind:value={options.maxRenderMode}>
 			<Select.Trigger class="overflow-hidden" aria-label=maxRenderMode>
-				{renderLevels.get(maxRenderMode)}
+				{renderLevels.get(options.maxRenderMode)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
 				{#each possibleRenderLevels as mode, i (i + mode.value)}
@@ -155,7 +149,7 @@
 			type="single"
 			min={0}
 			max={1000}
-			bind:value={opacity}
+			bind:value={options.opacity}
 			class="relative flex w-full touch-none select-none items-center"
 		>
 			<span class="bg-dark-10 relative h-2 w-full grow cursor-pointer overflow-hidden rounded-full">
@@ -166,7 +160,7 @@
 				class="border-border-input bg-background hover:border-dark-40 focus-visible:ring-foreground dark:bg-foreground dark:shadow-card focus-visible:outline-hidden block size-[25px] cursor-pointer rounded-full border shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50"
 			/>
 		</Slider.Root>
-		<input class="flex right-0 align-right" type="color" bind:value={color} />
+		<input class="flex right-0 align-right" type="color" bind:value={options.color} />
 	</div>
 {/snippet}
 

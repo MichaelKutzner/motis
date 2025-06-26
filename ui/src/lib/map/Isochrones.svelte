@@ -3,7 +3,7 @@
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
-	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry , type IsochronesPos } from '$lib/map/IsochronesShared';
+	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry, type IsochronesOptions, type IsochronesPos } from '$lib/map/IsochronesShared';
 	import type { WorkerMessage } from './IsochronesWorker';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
@@ -16,10 +16,7 @@
 		wheelchair,
 		maxAllTime,
 		active,
-		renderMode,
-		maxRenderMode,
-		color,
-		opacity
+		options,
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -28,10 +25,7 @@
 		wheelchair: boolean;
 		maxAllTime: number;
 		active: boolean;
-		renderMode: DisplayLevel;
-		maxRenderMode: DisplayLevel;
-		color: string;
-		opacity: number;
+		options: IsochronesOptions;
 	} = $props();
 
 	const name = 'isochrones-data';
@@ -100,7 +94,7 @@
 
 		worker.postMessage({
 			method: 'set-render-depth',
-			maxRenderLevel: maxRenderMode,
+			maxRenderLevel: options.maxRenderMode,
 		});
 	});
 
@@ -116,15 +110,15 @@
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setPaintProperty(canvasName, 'raster-opacity', opacity / 1000);
-		map.setPaintProperty(geoJSONName, 'fill-opacity', opacity / 1000);
+		map.setPaintProperty(canvasName, 'raster-opacity', options.opacity / 1000);
+		map.setPaintProperty(geoJSONName, 'fill-opacity', options.opacity / 1000);
 	});
 
 	$effect(() => {
 		if (!map || !canvasSource) {
 			return;
 		}
-		map.setPaintProperty(geoJSONName, 'fill-color', color);
+		map.setPaintProperty(geoJSONName, 'fill-color', options.color);
 	});
 
 	$effect(() => {
@@ -141,7 +135,7 @@
 			return;
 		}
 
-		const nextLevel = minDisplayLevel(renderMode, availableRenderLevel);
+		const nextLevel = minDisplayLevel(options.renderMode, availableRenderLevel);
 
 		if (nextLevel == 'NONE') {
 			currentRenderLevel = nextLevel;
@@ -165,7 +159,7 @@
 				level: currentRenderLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions: viewport,
-				color: currentRenderLevel == renderMode ? color : "magenta",
+				color: currentRenderLevel == options.renderMode ? options.color : "magenta",
 			});
 		} else {
 			currentRenderLevel = nextLevel;
@@ -183,7 +177,7 @@
 			type: 'raster',
 			source: canvasName,
 			paint: {
-				'raster-opacity': opacity / 1000
+				'raster-opacity': options.opacity / 1000
 			}
 		});
 
@@ -196,8 +190,8 @@
 			type: 'fill',
 			source: geoJSONName,
 			paint: {
-				'fill-color': color,
-				'fill-opacity': opacity / 1000
+				'fill-color': options.color,
+				'fill-opacity': options.opacity / 1000
 			}
 		});
 
@@ -230,7 +224,7 @@
 						}
 						if (isLess(availableRenderLevel, level)) {
 							availableRenderLevel = level;
-							if (!isLess(renderMode, availableRenderLevel)) {
+							if (!isLess(options.renderMode, availableRenderLevel)) {
 								requestCanvasUpdate();
 							}
 						}
