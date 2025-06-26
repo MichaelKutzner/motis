@@ -1,6 +1,6 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
-	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
+	import { CanvasSource, GeoJSONSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry, type IsochronesOptions, type IsochronesPos } from '$lib/map/IsochronesShared';
@@ -28,13 +28,15 @@
 		options: IsochronesOptions;
 	} = $props();
 
-	const name = 'isochrones-data';
-	const canvasName = `${name}-canvas`;
-	const geoJSONName = `${name}-geojson`;
 	const emptyGeometry: GeoJSON.GeoJSON = {"type":"LineString","coordinates": []};
-	let canvas: HTMLCanvasElement | undefined = undefined;
-	let canvasSource = $state<CanvasSource | undefined>(undefined);
-	let polygons = $state<Geometry | undefined>(undefined);
+	let objects = $state<{
+		worker: Worker,
+		canvasName: 'isochrones-canvas',
+		circlesName: 'isochrones-circles',
+		canvasSource: CanvasSource,
+		circlesSource: GeoJSONSource,
+	} | undefined>(undefined);
+	let circlesGeometry = $state<Geometry | GeoJSON.GeoJSON>(emptyGeometry);
 	let currentRenderLevel = $state<DisplayLevel>('NONE');
 	let availableRenderLevel = $state<DisplayLevel>('NONE');
 
@@ -60,8 +62,6 @@
 		[boundingBox._sw.lng, boundingBox._sw.lat]
 	]);
 
-	let worker: Worker | undefined = undefined;
-
 	let lastData: IsochronesPos[] = [];
 	let lastAllTime: number = maxAllTime;
 	// svelte-ignore state_referenced_locally
@@ -69,104 +69,21 @@
 	let dataIndex = 0;
 
 	$effect(() => {
-		if (!active) {
+		if (!map || !active || objects !== undefined) {
 			return;
 		}
 
-		const worker = setupWorker();
+		// Create sources, layers and canvases
+		const canvasName = 'isochrones-canvas';
+		const circlesName = 'isochrones-circles';
 
-		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
-			worker.postMessage({
-				method: 'update-data',
-				data: $state.snapshot(isochronesData),
-				maxDuration: $state.snapshot(maxAllTime),
-				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-				index: ++dataIndex,
-			});
-
-			lastData = isochronesData;
-			lastAllTime = maxAllTime;
-			lastSpeed = kilometersPerSecond;
-
-			polygons = undefined;
-			availableRenderLevel = 'NONE';
-		}
-
-		worker.postMessage({
-			method: 'set-render-depth',
-			maxRenderLevel: options.maxRenderMode,
-		});
-	});
-
-	$effect(() => {
-		if (!map || !canvasSource) {
+		let canvas = document.createElement('canvas');
+		if (canvas === undefined) {
+			console.log('Canvas not supported');
 			return;
 		}
-		map.setLayoutProperty(canvasName, 'visibility', active && isCanvasLevel(currentRenderLevel) ? 'visible' : 'none');
-		map.setLayoutProperty(geoJSONName, 'visibility', active && currentRenderLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
-	});
+		let renderCanvas = canvas.transferControlToOffscreen();
 
-	$effect(() => {
-		if (!map || !canvasSource) {
-			return;
-		}
-		map.setPaintProperty(canvasName, 'raster-opacity', options.opacity / 1000);
-		map.setPaintProperty(geoJSONName, 'fill-opacity', options.opacity / 1000);
-	});
-
-	$effect(() => {
-		if (!map || !canvasSource) {
-			return;
-		}
-		map.setPaintProperty(geoJSONName, 'fill-color', options.color);
-	});
-
-	$effect(() => {
-		if (!map || !canvasSource) {
-			return;
-		}
-		(map.getSource(geoJSONName) as GeoJSONSource).setData(polygons ?? emptyGeometry);
-	});
-
-	$effect(() => requestCanvasUpdate());
-
-	function requestCanvasUpdate() {
-		if (!map || !active) {
-			return;
-		}
-
-		const nextLevel = minDisplayLevel(options.renderMode, availableRenderLevel);
-
-		if (nextLevel == 'NONE') {
-			currentRenderLevel = nextLevel;
-		} else if (isCanvasLevel(nextLevel)) {
-			if (!canvasSource) {
-				canvasSource = setupLayers(map);
-				if (!canvasSource) {
-					return;
-				}
-			} else {
-				canvasSource.setCoordinates(boxCoords);
-			}
-			const worker = setupWorker();
-
-			const viewport = map._containerDimensions();
-
-			currentRenderLevel = nextLevel;
-
-			worker.postMessage({
-				method: 'render-canvas',
-				level: currentRenderLevel,
-				boundingBox: $state.snapshot(boundingBox),
-				dimensions: viewport,
-				color: currentRenderLevel == options.renderMode ? options.color : "magenta",
-			});
-		} else {
-			currentRenderLevel = nextLevel;
-		}
-	}
-
-	function setupLayers(map: Map) {
 		map.addSource(canvasName, {
 			type: 'canvas',
 			canvas: canvas,
@@ -180,61 +97,152 @@
 				'raster-opacity': options.opacity / 1000
 			}
 		});
+		const canvasSource = map.getSource(canvasName) as CanvasSource;
 
-		map.addSource(geoJSONName, {
+		map.addSource(circlesName, {
 			type: 'geojson',
 			data: emptyGeometry,
 		});
 		map.addLayer({
-			id: geoJSONName,
+			id: circlesName,
 			type: 'fill',
-			source: geoJSONName,
+			source: circlesName,
 			paint: {
 				'fill-color': options.color,
 				'fill-opacity': options.opacity / 1000
 			}
 		});
+		const circlesSource = map.getSource(circlesName) as GeoJSONSource;
 
-		return map.getSource(canvasName) as CanvasSource;
-	}
+		// Setup worker
+		const worker = new WebWorker();
 
-	function setupWorker() {
-		if (worker === undefined) {
-			worker = new WebWorker();
-			canvas = document.createElement('canvas');
-			let renderCanvas = canvas.transferControlToOffscreen();
-
-			worker.postMessage({
-				method: 'set-canvas',
-				canvas: renderCanvas,
-			}, [renderCanvas]);
-
-			worker.onmessage = (event: {data: WorkerMessage}) => {
-				const method = event.data.method;
-				switch (method) {
-					case 'update-render-level':
-						const index = event.data.index;
-						if (index < dataIndex) {
-							console.log('Got stale index from worker:', index, dataIndex);
-							return;
+		worker.onmessage = (event: {data: WorkerMessage}) => {
+			const method = event.data.method;
+			switch (method) {
+				case 'update-render-level':
+					const index = event.data.index;
+					if (index < dataIndex) {
+						console.log('Got stale index from worker:', index, dataIndex);
+						return;
+					}
+					const level: DisplayLevel = event.data.level;
+					if (level == 'GEOMETRY_CIRCLES') {
+						circlesGeometry = event.data.geometry ?? emptyGeometry;
+					}
+					if (isLess(availableRenderLevel, level)) {
+						availableRenderLevel = level;
+						if (!isLess(options.renderMode, availableRenderLevel)) {
+							requestCanvasUpdate();
 						}
-						const level: DisplayLevel = event.data.level;
-						if (level == 'GEOMETRY_CIRCLES') {
-							polygons = event.data.geometry;
-						}
-						if (isLess(availableRenderLevel, level)) {
-							availableRenderLevel = level;
-							if (!isLess(options.renderMode, availableRenderLevel)) {
-								requestCanvasUpdate();
-							}
-						}
-						break;
-					default:
-						console.log(`Unknown method '${method}'`);
-				}
-			};
+					}
+					break;
+				default:
+					console.log(`Unknown method '${method}'`);
+			}
+		};
+
+		worker.postMessage({
+			method: 'set-canvas',
+			canvas: renderCanvas,
+		}, [renderCanvas]);
+
+		// Store references
+		objects = {
+			worker: worker,
+			canvasName: canvasName,
+			circlesName: circlesName,
+			canvasSource: canvasSource,
+			circlesSource: circlesSource,
+		};
+	});
+
+	$effect(() => {
+		if (!active || objects === undefined) {
+			return;
 		}
-		return worker;
+
+		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+			objects.worker.postMessage({
+				method: 'update-data',
+				data: $state.snapshot(isochronesData),
+				maxDuration: $state.snapshot(maxAllTime),
+				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
+				index: ++dataIndex,
+			});
+
+			lastData = isochronesData;
+			lastAllTime = maxAllTime;
+			lastSpeed = kilometersPerSecond;
+
+			circlesGeometry = emptyGeometry;
+			availableRenderLevel = 'NONE';
+		}
+
+		objects.worker.postMessage({
+			method: 'set-render-depth',
+			maxRenderLevel: options.maxRenderMode,
+		});
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		map.setLayoutProperty(objects.canvasName, 'visibility', active && isCanvasLevel(currentRenderLevel) ? 'visible' : 'none');
+		map.setLayoutProperty(objects.circlesName, 'visibility', active && currentRenderLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		map.setPaintProperty(objects.canvasName, 'raster-opacity', options.opacity / 1000);
+		map.setPaintProperty(objects.circlesName, 'fill-opacity', options.opacity / 1000);
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		map.setPaintProperty(objects.circlesName, 'fill-color', options.color);
+	});
+
+	$effect(() => {
+		if (!map || objects === undefined) {
+			return;
+		}
+		objects.circlesSource.setData(circlesGeometry);
+	});
+
+	$effect(() => requestCanvasUpdate());
+
+	function requestCanvasUpdate() {
+		if (!map || !active || objects === undefined) {
+			return;
+		}
+
+		const nextLevel = minDisplayLevel(options.renderMode, availableRenderLevel);
+
+		if (nextLevel == 'NONE') {
+			currentRenderLevel = nextLevel;
+		} else if (isCanvasLevel(nextLevel)) {
+			objects.canvasSource.setCoordinates(boxCoords);
+
+			const viewport = map._containerDimensions();
+
+			currentRenderLevel = nextLevel;
+
+			objects.worker.postMessage({
+				method: 'render-canvas',
+				level: currentRenderLevel,
+				boundingBox: $state.snapshot(boundingBox),
+				dimensions: viewport,
+				color: currentRenderLevel == options.renderMode ? options.color : "magenta",
+			});
+		} else {
+			currentRenderLevel = nextLevel;
+		}
 	}
 
 </script>
