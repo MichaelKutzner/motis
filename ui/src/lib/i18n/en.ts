@@ -113,7 +113,7 @@ const translations: Translations = {
 		maxComputeLevel: 'Max. computation level',
 		canvasRects: 'Rects (Overlay)',
 		canvasCircles: 'Circles (Overlay)',
-		geojsonCircles: 'Approximation (Circles)',
+		geojsonCircles: 'Circles (Geometry)',
 		styling: 'Isochrones styling',
 	},
 	incline: 'Incline',

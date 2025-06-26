@@ -100,7 +100,7 @@ const translations: Translations = {
 		maxComputeLevel: 'Max. Berechnungsebene',
 		canvasRects: 'Rechtecke (Overlay)',
 		canvasCircles: 'Kreise (Overlay)',
-		geojsonCircles: 'Näherung (Kreise)',
+		geojsonCircles: 'Kreise (Geometrie)',
 		styling: 'Darstellung der Isochronen',
 	},
 	RENTAL_BICYCLE: 'Bikesharing',

@@ -103,7 +103,7 @@ const translations: Translations = {
 		maxComputeLevel: 'Niveau de calcul max.',
 		canvasRects: 'Rectes (Superposer)',
 		canvasCircles: 'Cercles (Superposer)',
-		geojsonCircles: 'Approximation (Circles)',
+		geojsonCircles: 'Circles (Géométrie)',
 		styling: 'Style pour Isochrone',
 	},
 	RENTAL_BICYCLE: 'Vélo partagé',
