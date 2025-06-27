@@ -61,11 +61,11 @@ self.onmessage = async function(event) {
 		ctx.fillStyle = color;
 		ctx.clearRect(0, 0, dimensions[0], dimensions[1]);
 
-		if (level == 'OVERLAY_RECTS' && rects) {
-			drawRects(ctx, rects, transform);
-		} else if (level == 'OVERLAY_CIRCLES' && circles) {
+		if (level == 'OVERLAY_RECTS') {
+			drawRects(ctx, transform);
+		} else if (level == 'OVERLAY_CIRCLES') {
 			const isVisible = getIsVisible(boundingBox);
-			drawCircles(ctx, circles, transform, isVisible, dimensions);
+			drawCircles(ctx, transform, isVisible, dimensions);
 		} else {
 			console.log(`Cannot render level ${level}`);
 		}
@@ -99,7 +99,27 @@ function getIsVisible(boundingBox: LngLatBounds) {
 	}
 }
 
-async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: CircleType[], transform: (_: Position) => Position, is_visible: (_: CircleType) => boolean, dimensions: [number, number]) {
+function drawRects(ctx: OffscreenCanvasRenderingContext2D, transform: (p: Position) => Position) {
+	if (rects === undefined) {
+		return;
+	}
+	rects.forEach((rect: LngLatBounds) => {
+		ctx.save(); // Store canvas state
+
+		const min = transform([rect._sw.lng, rect._sw.lat]);
+		const max = transform([rect._ne.lng, rect._ne.lat]);
+		const diff_x = max[0] - min[0];
+		const diff_y = max[1] - min[1];
+		ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+		// Restore previous state on top
+		ctx.restore();
+	});
+}
+
+function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Position) => Position, is_visible: (_: CircleType) => boolean, dimensions: [number, number]) {
+	if (circles === undefined) {
+		return;
+	}
 	circles.filter(is_visible).forEach((circle: CircleType) => {
 		ctx.save(); // Store canvas state
 
@@ -128,20 +148,6 @@ async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: Circ
 			ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
 		}
 
-		// Restore previous state on top
-		ctx.restore();
-	});
-}
-
-function drawRects(ctx: OffscreenCanvasRenderingContext2D, rects: LngLatBounds[], transform: (p: Position) => Position) {
-	rects.forEach((rect: LngLatBounds) => {
-		ctx.save(); // Store canvas state
-
-		const min = transform([rect._sw.lng, rect._sw.lat]);
-		const max = transform([rect._ne.lng, rect._ne.lat]);
-		const diff_x = max[0] - min[0];
-		const diff_y = max[1] - min[1];
-		ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
 		// Restore previous state on top
 		ctx.restore();
 	});
