@@ -124,8 +124,8 @@ async function drawCircles(ctx: OffscreenCanvasRenderingContext2D, circles: Circ
 			}
 			ctx.clip();
 
-			// Fill map, clipped to circle
-			ctx.fillRect(0, 0, dimensions[0], dimensions[1]);
+			// Fill bounding box, clipped to circle
+			ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
 		}
 
 		// Restore previous state on top
