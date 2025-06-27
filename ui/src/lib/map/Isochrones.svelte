@@ -135,9 +135,6 @@
 					}
 					if (isLess(bestAvailableDisplayLevel, level)) {
 						bestAvailableDisplayLevel = level;
-						if (!isLess(options.preferredDisplayLevel, bestAvailableDisplayLevel)) {
-							requestCanvasUpdate();
-						}
 					}
 					break;
 				default:
@@ -219,9 +216,7 @@
 		objects.circlesSource.setData(circlesGeometry);
 	});
 
-	$effect(() => requestCanvasUpdate());
-
-	function requestCanvasUpdate() {
+	$effect(() => {
 		if (!map || !active || objects === undefined) {
 			return;
 		}
@@ -247,6 +242,6 @@
 		} else {
 			currentDisplayLevel = nextLevel;
 		}
-	}
+	});
 
 </script>
