@@ -27,7 +27,7 @@ self.onmessage = async function(event) {
 		dataIndex = index;
 		rects = undefined;
 		circles = undefined;
-		let worker = setupWorker(true);
+		let worker = createWorker();
 		worker.postMessage({
 			method: 'set-data',
 			index: dataIndex,
@@ -36,10 +36,9 @@ self.onmessage = async function(event) {
 			maxSeconds: maxSeconds,
 		});
 	} else if (method == 'set-max-display-level') {
-		const level: DisplayLevel = event.data.maxDisplayLevel;
-		if (dataIndex > 0) {
-			let worker = setupWorker(false);
-			worker.postMessage({method: 'set-max-level', level: level});
+		if (shapeWorker !== undefined) {
+			const level: DisplayLevel = event.data.maxDisplayLevel;
+			shapeWorker.postMessage({method: 'set-max-level', level: level});
 		}
 	} else if (method == 'render-canvas') {
 		if (!canvas) {
@@ -153,46 +152,41 @@ function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Posi
 	});
 }
 
-function setupWorker(stopOld: boolean) {
-	if (stopOld) {
-		shapeWorker?.terminate();
-		shapeWorker = undefined;
-	}
+function createWorker() {
+	shapeWorker?.terminate();
 
-	if (shapeWorker === undefined) {
-		shapeWorker = new ShapeWorker();
+	shapeWorker = new ShapeWorker();
 
-		shapeWorker.onmessage = (event: {data: ShapeMessage}) => {
-			const method = event.data.method;
-			switch (method) {
-				case 'update-shape':
-					const index = event.data.index;
-					if (index < dataIndex) {
-						console.log(`Got stale index from shape worker (Got ${index}, expected ${dataIndex})`);
-						return;
-					}
-					const msg: UpdateMessage = event.data;
-					switch (msg.level) {
-						case 'OVERLAY_RECTS':
-							rects = msg.data;
-							self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
-							break;
-						case 'OVERLAY_CIRCLES':
-							circles = msg.data;
-							self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
-							break;
-						case 'GEOMETRY_CIRCLES':
-							const geometry = msg.data;
-							self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level, geometry: geometry} as WorkerMessage);
-							break;
-						default:
-							console.log(`Unknown message '${msg}`);
-					}
-					break;
-				default:
-					console.log(`Unknown method '${method}'`);
-			}
-		};
-	}
+	shapeWorker.onmessage = (event: {data: ShapeMessage}) => {
+		const method = event.data.method;
+		switch (method) {
+			case 'update-shape':
+				const index = event.data.index;
+				if (index < dataIndex) {
+					console.log(`Got stale index from shape worker (Got ${index}, expected ${dataIndex})`);
+					return;
+				}
+				const msg: UpdateMessage = event.data;
+				switch (msg.level) {
+					case 'OVERLAY_RECTS':
+						rects = msg.data;
+						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
+						break;
+					case 'OVERLAY_CIRCLES':
+						circles = msg.data;
+						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
+						break;
+					case 'GEOMETRY_CIRCLES':
+						const geometry = msg.data;
+						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level, geometry: geometry} as WorkerMessage);
+						break;
+					default:
+						console.log(`Unknown message '${msg}`);
+				}
+				break;
+			default:
+				console.log(`Unknown method '${method}'`);
+		}
+	};
 	return shapeWorker;
 }
