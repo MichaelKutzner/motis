@@ -71,12 +71,12 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
-	const renderLevels = new Map([
+	const displayLevels = new Map([
 		['OVERLAY_RECTS' as DisplayLevel, t.isochrones.canvasRects],
 		['OVERLAY_CIRCLES' as DisplayLevel, t.isochrones.canvasCircles],
 		['GEOMETRY_CIRCLES' as DisplayLevel, t.isochrones.geojsonCircles],
 	]);
-	const possibleRenderLevels = renderLevels.entries().map(([id, label]) => (
+	const possibleDisplayLevels = displayLevels.entries().map(([id, label]) => (
 		{value: id, label: label}
 	)).toArray();
 
@@ -113,14 +113,14 @@
 		<div>
 			{t.isochrones.displayLevel}
 		</div>
-		<Select.Root type="single" bind:value={options.renderMode}>
-			<Select.Trigger class="overflow-hidden" aria-label=renderMode>
-				{renderLevels.get(options.renderMode)}
+		<Select.Root type="single" bind:value={options.preferredDisplayLevel}>
+			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
+				{displayLevels.get(options.preferredDisplayLevel)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
-				{#each possibleRenderLevels as mode, i (i + mode.value)}
-					<Select.Item value={mode.value} label={mode.label}>
-						{mode.label}
+				{#each possibleDisplayLevels as level, i (i + level.value)}
+					<Select.Item value={level.value} label={level.label}>
+						{level.label}
 					</Select.Item>
 				{/each}
 			</Select.Content>
@@ -128,14 +128,14 @@
 		<div>
 			{t.isochrones.maxComputeLevel}
 		</div>
-		<Select.Root type="single" bind:value={options.maxRenderMode}>
-			<Select.Trigger class="overflow-hidden" aria-label=maxRenderMode>
-				{renderLevels.get(options.maxRenderMode)}
+		<Select.Root type="single" bind:value={options.maxDisplayLevel}>
+			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.maxComputeLevel}>
+				{displayLevels.get(options.maxDisplayLevel)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
-				{#each possibleRenderLevels as mode, i (i + mode.value)}
-					<Select.Item value={mode.value} label={mode.label}>
-						{mode.label}
+				{#each possibleDisplayLevels as level, i (i + level.value)}
+					<Select.Item value={level.value} label={level.label}>
+						{level.label}
 					</Select.Item>
 				{/each}
 			</Select.Content>

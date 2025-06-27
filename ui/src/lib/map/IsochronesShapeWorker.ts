@@ -3,117 +3,113 @@ import circle from '@turf/circle';
 import union from '@turf/union';
 import { featureCollection } from '@turf/helpers';
 import { LngLatBounds } from 'maplibre-gl';
-import { isLess, nextDisplayLevel, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
+import { isLess, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
 
-type RectType = {bbox: LngLatBounds, distance: number, data: IsochronesPos};
-type CircleType = ReturnType<typeof circle>;
 export type UpdateMessage = {level: 'OVERLAY_RECTS', data: LngLatBounds[]} | {level: 'OVERLAY_CIRCLES', data: CircleType[]} | {level: 'GEOMETRY_CIRCLES', data: Geometry | undefined};
 export type ShapeMessage = {method: 'update-shape', index: number} & UpdateMessage;
+type RectType = {rect: LngLatBounds, distance: number, data: IsochronesPos};
+type CircleType = ReturnType<typeof circle>;
 
 let dataIndex = 0;
 let data: IsochronesPos[] | undefined = undefined;
 let rects: RectType[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 let circleGeometry: Geometry | undefined = undefined;
-let currentDepth: DisplayLevel = 'NONE';
-let maxDepth: DisplayLevel = 'NONE';
+let highestComputedLevel: DisplayLevel = 'NONE';
+let maxLevel: DisplayLevel = 'NONE';
 let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
 
 self.onmessage = async function(event) {
 	const method = event.data.method;
 	if (method == 'set-data') {
+		resetState(event.data.index);
 		data = event.data.data;
-		resetResults(event.data.index);
-		const speed = event.data.speed;
-		const maxDuration = event.data.maxDuration;
-		maxDistance = getMaxDistanceFunction(speed, maxDuration);
+		const kilometersPerSecond = event.data.kilometersPerSecond;
+		const maxSeconds = event.data.maxSeconds;
+		maxDistance = getMaxDistanceFunction(kilometersPerSecond, maxSeconds);
 
-	} else if (method == 'update-depth') {
-		maxDepth = event.data.depth;
+	} else if (method == 'set-max-level') {
+		maxLevel = event.data.level;
 		createShapes();
 	}
 }
 
-function resetResults(index: number) {
+function resetState(index: number) {
 	dataIndex = index;
 	rects = undefined;
 	circles = undefined;
 	circleGeometry = undefined;
-	currentDepth = 'NONE';
-	maxDepth = 'NONE';
+	highestComputedLevel = 'NONE';
+	maxLevel = 'NONE';
 	maxDistance = (_: IsochronesPos) => 0;
 }
 
-function getMaxDistanceFunction(kilometersPerSecond: number, maxDuration: number) {
-	return (pos: IsochronesPos) => Math.min(pos.seconds, maxDuration) * kilometersPerSecond;
+function getMaxDistanceFunction(kilometersPerSecond: number, maxSeconds: number) {
+	return (pos: IsochronesPos) => Math.min(pos.seconds, maxSeconds) * kilometersPerSecond;
 }
 
 async function createShapes() {
-	const index = dataIndex;
-	const isStale = () => index != dataIndex;
-	if (working || !isLess(currentDepth, maxDepth)) {
+	if (working || !isLess(highestComputedLevel, maxLevel)) {
 		return;
 	}
 	working = true;
-	let success = false;
-	switch (currentDepth) {
+	const workingIndex = dataIndex;
+	const isStale = () => workingIndex != dataIndex;
+	switch (highestComputedLevel) {
 		case 'NONE':
-			success = await createBboxes().then(async (b) => {
+			await createRects().then(async (allRects: RectType[]) => {
 				if (isStale()) {
 					console.log('Index got stale while computing rects');
-					return false;
+					return;
 				}
-				rects = b;
-				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.bbox)} as ShapeMessage);
-				return await filterContained(rects).then((b2) => {
+				rects = allRects;
+				highestComputedLevel = 'OVERLAY_RECTS';
+				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.rect)} as ShapeMessage);
+				await filterNotContainedRects(allRects).then((notContainedRects: RectType[]) => {
 					if (isStale()) {
 						console.log('Index got stale deleting covered rects');
-						return false;
+						return;
 					}
-					rects = b2;
-					self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.bbox)} as ShapeMessage);
-					return true;
+					rects = notContainedRects;
+					self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.rect)} as ShapeMessage);
 				});
 			});
 			break;
 		case 'OVERLAY_RECTS':
-			success = await createCircles().then((c) => {
+			await createCircles().then((allCircles: CircleType[]) => {
 				if (isStale()) {
 					console.log('Index got stale while computing circles');
-					return false;
+					return;
 				}
-				circles = c;
+				circles = allCircles;
+				highestComputedLevel = 'OVERLAY_CIRCLES';
 				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_CIRCLES', data: circles} as ShapeMessage);
-				return true;
 			});
 			break;
 		case 'OVERLAY_CIRCLES':
-			success = await createUnion().then((u) => {
+			await createUnion().then((geometry: Geometry | undefined) => {
 				if (isStale()) {
 					console.log('Index got stale while computing geometry');
-					return false;
+					return;
 				}
-				circleGeometry = u;
+				circleGeometry = geometry;
+				highestComputedLevel = 'GEOMETRY_CIRCLES';
 				self.postMessage({method: 'update-shape', index: dataIndex, level: 'GEOMETRY_CIRCLES', data: circleGeometry} as ShapeMessage);
-				return true;
 			});
 			break;
 		default:
-			console.log(`Unexpected level '${currentDepth}'`)
-	}
-	if (success) {
-		currentDepth = nextDisplayLevel(currentDepth);
+			console.log(`Unexpected level '${highestComputedLevel}'`)
 	}
 	working = false;
 	createShapes();
 }
 
-async function createBboxes() {
+async function createRects() {
 	if (data === undefined) {
 		return [];
 	}
-	const promises = data.map(async (point) => {
+	const promises = data.map(async (point: IsochronesPos) => {
 		const r = maxDistance(point);
 		// Approximation: Compare geo::includes/geo/box.h
 		const d_lat = r / 111.0;
@@ -121,7 +117,7 @@ async function createBboxes() {
 		const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
 		const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
 		return {
-			bbox: LngLatBounds.convert([
+			rect: LngLatBounds.convert([
 				[point.lng - d_lng, point.lat - d_lat],
 				[point.lng + d_lng, point.lat + d_lat],
 			]),
@@ -132,21 +128,22 @@ async function createBboxes() {
 	return await Promise.all(promises);
 }
 
-function contains(larger: any, smaller: any): boolean {
-	const bb1 = larger.bbox;
-	const bb2 = smaller.bbox;
-	return bb1._sw.lat <= bb2._sw.lat && bb1._sw.lng <= bb2._sw.lng
-	    && bb1._ne.lat >= bb2._ne.lat && bb1._ne.lng >= bb2._ne.lng;
+function contains(larger: RectType, smaller: RectType): boolean {
+	const r1 = larger.rect;
+	const r2 = smaller.rect;
+	return r1._sw.lat <= r2._sw.lat && r1._sw.lng <= r2._sw.lng
+	    && r1._ne.lat >= r2._ne.lat && r1._ne.lng >= r2._ne.lng;
 }
 
-async function filterContained(boxes: RectType[]) {
+async function filterNotContainedRects(allRects: RectType[]) {
+	// Remove all rects, that are completely contained in at least one other
 	// Sort by distance, descending
-	boxes.sort((a: any, b: any) => b.distance - a.distance);
-	const isCoveredPromises = boxes.map(async (box: any, index: number) =>
-		boxes.slice(0, index).some((b: any) => contains(b, box))
+	allRects.sort((a: RectType, b: RectType) => b.distance - a.distance);
+	const isCoveredPromises = allRects.map(async (box: RectType, index: number) =>
+		allRects.slice(0, index).some((b: RectType) => contains(b, box))
 	);
 	const isCovered = await Promise.all(isCoveredPromises);
-	const visibleBoxes = boxes.filter((box: any , index: number) => !isCovered[index]);
+	const visibleBoxes = allRects.filter((_: RectType, index: number) => !isCovered[index]);
 	return visibleBoxes;
 }
 
@@ -154,8 +151,8 @@ async function createCircles() {
 	if (rects === undefined) {
 		return [];
 	}
-	const promises = rects.map(async (point) => {
-		let c = circle([point.data.lng, point.data.lat], point.distance, {
+	const promises = rects.map(async (rect: RectType) => {
+		let c = circle([rect.data.lng, rect.data.lat], rect.distance, {
 			// steps: 64,
 			units: 'kilometers'
 		});
@@ -167,19 +164,20 @@ async function createCircles() {
 
 // Implementation based on https://stackoverflow.com/a/75982694
 // Create union for smaller polygons first
-// Using a pipe like approach should place larger polygons at the end
+// Using a pipe like approach should place larger polygons at the end,
+// reducing the number of expensive computations
 
 async function createUnion() {
 	if (circles === undefined) {
 		return undefined;
 	}
-	const queue: Geometry[] = await circles.map((c) => c);
+	const queue: Geometry[] = await circles.map((c: CircleType) => c);
 	while (queue.length > 1) {
-		const a = queue.shift()!;
-		const b = queue.shift()!;
-		const c = await union(featureCollection([a, b]));
-		if (c) {
-			queue.push(c);
+		const a: Geometry = queue.shift()!;
+		const b: Geometry = queue.shift()!;
+		const u: Geometry | null = await union(featureCollection([a, b]));
+		if (u) {
+			queue.push(u);
 		}
 	}
 	return queue.length == 1 ? queue[0] : undefined;

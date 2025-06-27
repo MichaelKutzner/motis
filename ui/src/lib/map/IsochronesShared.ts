@@ -6,8 +6,8 @@ export type DisplayLevel = typeof DisplayLevels[number];
 export type Geometry = Feature<Polygon | MultiPolygon, GeoJsonProperties>;
 
 export interface IsochronesOptions {
-	renderMode: DisplayLevel;
-	maxRenderMode: DisplayLevel;
+	preferredDisplayLevel: DisplayLevel;
+	maxDisplayLevel: DisplayLevel;
 	color: string;
 	opacity: number;
 }
@@ -18,7 +18,6 @@ export interface IsochronesPos {
 }
 
 
-export const nextDisplayLevel = (a: DisplayLevel) => DisplayLevels[Math.min(DisplayLevels.indexOf(a) + 1, DisplayLevels.length - 1)];
 export const isLess = (a: DisplayLevel, b: DisplayLevel) => DisplayLevels.indexOf(a) < DisplayLevels.indexOf(b);
 export const minDisplayLevel = (a: DisplayLevel, b: DisplayLevel) => isLess(a, b) ? a : b;
 

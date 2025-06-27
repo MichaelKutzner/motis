@@ -2,9 +2,9 @@
 	import maplibregl from 'maplibre-gl';
 	import { CanvasSource, GeoJSONSource, type LngLatBoundsLike, type Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
-	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry, type IsochronesOptions, type IsochronesPos } from '$lib/map/IsochronesShared';
 	import type { WorkerMessage } from './IsochronesWorker';
+	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
 
@@ -29,18 +29,20 @@
 	} = $props();
 
 	const emptyGeometry: GeoJSON.GeoJSON = {"type":"LineString","coordinates": []};
+	// Must all exist
 	let objects = $state<{
 		worker: Worker,
-		canvasName: 'isochrones-canvas',
-		circlesName: 'isochrones-circles',
+		canvasLayer: 'isochrones-canvas',
+		circlesLayer: 'isochrones-circles',
 		canvasSource: CanvasSource,
 		circlesSource: GeoJSONSource,
 	} | undefined>(undefined);
 	let circlesGeometry = $state<Geometry | GeoJSON.GeoJSON>(emptyGeometry);
-	let currentRenderLevel = $state<DisplayLevel>('NONE');
-	let availableRenderLevel = $state<DisplayLevel>('NONE');
+	let currentDisplayLevel = $state<DisplayLevel>('NONE');
+	let bestAvailableDisplayLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
+		// Should match the speed used for routing
 		streetModes.includes('BIKE')
 			? 0.0038 // 3.8 meters per second
 			: wheelchair
@@ -63,56 +65,57 @@
 	]);
 
 	let lastData: IsochronesPos[] = [];
-	let lastAllTime: number = maxAllTime;
+	let lastMaxAllTime: number = maxAllTime;
 	// svelte-ignore state_referenced_locally
-	let lastSpeed: number | undefined = kilometersPerSecond;
+	let lastSpeed: number = kilometersPerSecond;
 	let dataIndex = 0;
 
+	// Setup objects
 	$effect(() => {
 		if (!map || !active || objects !== undefined) {
 			return;
 		}
 
 		// Create sources, layers and canvases
-		const canvasName = 'isochrones-canvas';
-		const circlesName = 'isochrones-circles';
+		const canvasLayer = 'isochrones-canvas';
+		const circlesLayer = 'isochrones-circles';
 
 		let canvas = document.createElement('canvas');
 		if (canvas === undefined) {
 			console.log('Canvas not supported');
 			return;
 		}
-		let renderCanvas = canvas.transferControlToOffscreen();
+		let offscreenCanvas = canvas.transferControlToOffscreen();
 
-		map.addSource(canvasName, {
+		map.addSource(canvasLayer, {
 			type: 'canvas',
 			canvas: canvas,
 			coordinates: boxCoords,
 		});
 		map.addLayer({
-			id: canvasName,
+			id: canvasLayer,
 			type: 'raster',
-			source: canvasName,
+			source: canvasLayer,
 			paint: {
 				'raster-opacity': options.opacity / 1000
 			}
 		});
-		const canvasSource = map.getSource(canvasName) as CanvasSource;
+		const canvasSource = map.getSource(canvasLayer) as CanvasSource;
 
-		map.addSource(circlesName, {
+		map.addSource(circlesLayer, {
 			type: 'geojson',
 			data: emptyGeometry,
 		});
 		map.addLayer({
-			id: circlesName,
+			id: circlesLayer,
 			type: 'fill',
-			source: circlesName,
+			source: circlesLayer,
 			paint: {
 				'fill-color': options.color,
 				'fill-opacity': options.opacity / 1000
 			}
 		});
-		const circlesSource = map.getSource(circlesName) as GeoJSONSource;
+		const circlesSource = map.getSource(circlesLayer) as GeoJSONSource;
 
 		// Setup worker
 		const worker = new WebWorker();
@@ -120,19 +123,19 @@
 		worker.onmessage = (event: {data: WorkerMessage}) => {
 			const method = event.data.method;
 			switch (method) {
-				case 'update-render-level':
+				case 'update-display-level':
 					const index = event.data.index;
 					if (index < dataIndex) {
-						console.log('Got stale index from worker:', index, dataIndex);
+						console.log(`Got stale index from worker (Got ${index}, expected ${dataIndex})`);
 						return;
 					}
 					const level: DisplayLevel = event.data.level;
 					if (level == 'GEOMETRY_CIRCLES') {
 						circlesGeometry = event.data.geometry ?? emptyGeometry;
 					}
-					if (isLess(availableRenderLevel, level)) {
-						availableRenderLevel = level;
-						if (!isLess(options.renderMode, availableRenderLevel)) {
+					if (isLess(bestAvailableDisplayLevel, level)) {
+						bestAvailableDisplayLevel = level;
+						if (!isLess(options.preferredDisplayLevel, bestAvailableDisplayLevel)) {
 							requestCanvasUpdate();
 						}
 					}
@@ -144,14 +147,14 @@
 
 		worker.postMessage({
 			method: 'set-canvas',
-			canvas: renderCanvas,
-		}, [renderCanvas]);
+			canvas: offscreenCanvas,
+		}, [offscreenCanvas]);
 
 		// Store references
 		objects = {
 			worker: worker,
-			canvasName: canvasName,
-			circlesName: circlesName,
+			canvasLayer: canvasLayer,
+			circlesLayer: circlesLayer,
 			canvasSource: canvasSource,
 			circlesSource: circlesSource,
 		};
@@ -162,26 +165,27 @@
 			return;
 		}
 
-		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+		// isochronesData and lastData might both be empty, but have different references
+		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastMaxAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
 			objects.worker.postMessage({
 				method: 'update-data',
-				data: $state.snapshot(isochronesData),
-				maxDuration: $state.snapshot(maxAllTime),
-				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
 				index: ++dataIndex,
+				data: $state.snapshot(isochronesData),
+				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
+				maxSeconds: $state.snapshot(maxAllTime),
 			});
 
 			lastData = isochronesData;
-			lastAllTime = maxAllTime;
+			lastMaxAllTime = maxAllTime;
 			lastSpeed = kilometersPerSecond;
 
 			circlesGeometry = emptyGeometry;
-			availableRenderLevel = 'NONE';
+			bestAvailableDisplayLevel = 'NONE';
 		}
 
 		objects.worker.postMessage({
-			method: 'set-render-depth',
-			maxRenderLevel: options.maxRenderMode,
+			method: 'set-max-display-level',
+			maxDisplayLevel: options.maxDisplayLevel,
 		});
 	});
 
@@ -189,23 +193,23 @@
 		if (!map || objects === undefined) {
 			return;
 		}
-		map.setLayoutProperty(objects.canvasName, 'visibility', active && isCanvasLevel(currentRenderLevel) ? 'visible' : 'none');
-		map.setLayoutProperty(objects.circlesName, 'visibility', active && currentRenderLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
+		map.setLayoutProperty(objects.canvasLayer, 'visibility', active && isCanvasLevel(currentDisplayLevel) ? 'visible' : 'none');
+		map.setLayoutProperty(objects.circlesLayer, 'visibility', active && currentDisplayLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
 	});
 
 	$effect(() => {
 		if (!map || objects === undefined) {
 			return;
 		}
-		map.setPaintProperty(objects.canvasName, 'raster-opacity', options.opacity / 1000);
-		map.setPaintProperty(objects.circlesName, 'fill-opacity', options.opacity / 1000);
+		map.setPaintProperty(objects.canvasLayer, 'raster-opacity', options.opacity / 1000);
+		map.setPaintProperty(objects.circlesLayer, 'fill-opacity', options.opacity / 1000);
 	});
 
 	$effect(() => {
 		if (!map || objects === undefined) {
 			return;
 		}
-		map.setPaintProperty(objects.circlesName, 'fill-color', options.color);
+		map.setPaintProperty(objects.circlesLayer, 'fill-color', options.color);
 	});
 
 	$effect(() => {
@@ -222,26 +226,26 @@
 			return;
 		}
 
-		const nextLevel = minDisplayLevel(options.renderMode, availableRenderLevel);
+		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
 
 		if (nextLevel == 'NONE') {
-			currentRenderLevel = nextLevel;
+			currentDisplayLevel = nextLevel;
 		} else if (isCanvasLevel(nextLevel)) {
 			objects.canvasSource.setCoordinates(boxCoords);
 
-			const viewport = map._containerDimensions();
+			const dimensions = map._containerDimensions();
 
-			currentRenderLevel = nextLevel;
+			currentDisplayLevel = nextLevel;
 
 			objects.worker.postMessage({
 				method: 'render-canvas',
-				level: currentRenderLevel,
+				level: currentDisplayLevel,
 				boundingBox: $state.snapshot(boundingBox),
-				dimensions: viewport,
-				color: currentRenderLevel == options.renderMode ? options.color : "magenta",
+				dimensions: dimensions,
+				color: currentDisplayLevel == options.preferredDisplayLevel ? options.color : "magenta",
 			});
 		} else {
-			currentRenderLevel = nextLevel;
+			currentDisplayLevel = nextLevel;
 		}
 	}
 
