@@ -1,7 +1,8 @@
 import bbox from '@turf/bbox';
 import circle from '@turf/circle';
+import destination from '@turf/destination';
 import union from '@turf/union';
-import { featureCollection } from '@turf/helpers';
+import { featureCollection, point } from '@turf/helpers';
 import { LngLatBounds } from 'maplibre-gl';
 import { isLess, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
 
@@ -109,20 +110,20 @@ async function createRects() {
 	if (data === undefined) {
 		return [];
 	}
-	const promises = data.map(async (point: IsochronesPos) => {
-		const r = maxDistance(point);
-		// Approximation: Compare geo::includes/geo/box.h
-		const d_lat = r / 111.0;
-		const min_lat_rad = point.lat * Math.PI / 180;
-		const min_km_per_deg = 111.2 * Math.cos(min_lat_rad);
-		const d_lng = min_km_per_deg > 0 ? r / min_km_per_deg : 0;
+	const promises = data.map(async (pos: IsochronesPos) => {
+		const center = point([pos.lng, pos.lat]);
+		const r = maxDistance(pos);
+		const north = destination(center, r, 0, {units: "kilometers"});
+		const east = destination(center, r, 90, {units: "kilometers"});
+		const south = destination(center, r, 180, {units: "kilometers"});
+		const west = destination(center, r, -90, {units: "kilometers"});
 		return {
 			rect: LngLatBounds.convert([
-				[point.lng - d_lng, point.lat - d_lat],
-				[point.lng + d_lng, point.lat + d_lat],
+				[west.geometry.coordinates[0], south.geometry.coordinates[1]],
+				[east.geometry.coordinates[0], north.geometry.coordinates[1]],
 			]),
 			distance: r,
-			data: point,
+			data: pos,
 		};
 	});
 	return await Promise.all(promises);
