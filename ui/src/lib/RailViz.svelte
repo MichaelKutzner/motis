@@ -270,7 +270,7 @@
 				interleaved: true,
 				layers: [],
 				getTooltip: ({ object }) => {
-					if (!object) {
+					if (!object || !active) {
 						return null;
 					}
 					return {
