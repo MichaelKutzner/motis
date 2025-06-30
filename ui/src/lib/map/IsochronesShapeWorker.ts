@@ -1,8 +1,8 @@
-import bbox from '@turf/bbox';
-import circle from '@turf/circle';
-import destination from '@turf/destination';
-import union from '@turf/union';
+import { bbox } from '@turf/bbox';
+import { circle } from '@turf/circle';
+import { destination } from '@turf/destination';
 import { featureCollection, point } from '@turf/helpers';
+import { union } from '@turf/union';
 import { LngLatBounds } from 'maplibre-gl';
 import { isLess, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
 

@@ -1,5 +1,5 @@
-import circle from '@turf/circle';
-import { LngLatBounds } from 'maplibre-gl';
+import type { circle } from '@turf/circle';
+import type { LngLatBounds } from 'maplibre-gl';
 import type { Position } from 'geojson';
 import type { ShapeMessage, UpdateMessage } from '$lib/map/IsochronesShapeWorker';
 import type { DisplayLevel, Geometry } from '$lib/map/IsochronesShared';
