@@ -1,4 +1,3 @@
-import { bbox } from '@turf/bbox';
 import { circle } from '@turf/circle';
 import { destination } from '@turf/destination';
 import { featureCollection, point } from '@turf/helpers';
@@ -157,7 +156,8 @@ async function createCircles() {
 			// steps: 64,
 			units: 'kilometers'
 		});
-		c.bbox = bbox(c);
+		// bbox extent in [minX, minY, maxX, maxY] order
+		c.bbox = [rect.rect._sw.lng, rect.rect._sw.lat, rect.rect._ne.lng, rect.rect._ne.lat];
 		return c;
 	});
 	return await Promise.all(promises);
