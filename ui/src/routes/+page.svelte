@@ -208,8 +208,8 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		preferredDisplayLevel: urlParams?.get('isochronesPreferredLevel') as DisplayLevel ?? 'GEOMETRY_CIRCLES',
-		maxDisplayLevel: urlParams?.get('isochronesMaxLevel') as DisplayLevel ?? 'GEOMETRY_CIRCLES',
+		preferredDisplayLevel: urlParams?.get('isochronesPreferredLevel') as DisplayLevel ?? defaultQuery.isochronesDisplayLevel,
+		maxDisplayLevel: urlParams?.get('isochronesMaxLevel') as DisplayLevel ?? defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
 	});
