@@ -107,30 +107,30 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, transform: (p: Positi
 
 		const min = transform([rect._sw.lng, rect._sw.lat]);
 		const max = transform([rect._ne.lng, rect._ne.lat]);
-		const diff_x = max[0] - min[0];
-		const diff_y = max[1] - min[1];
-		ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+		const diffX = max[0] - min[0];
+		const diffY = max[1] - min[1];
+		ctx.fillRect(min[0], min[1], diffX + 1, diffY + 1);
 		// Restore previous state on top
 		ctx.restore();
 	});
 }
 
-function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Position) => Position, is_visible: (_: CircleType) => boolean, dimensions: [number, number]) {
+function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Position) => Position, isVisible: (_: CircleType) => boolean, dimensions: [number, number]) {
 	if (circles === undefined) {
 		return;
 	}
-	circles.filter(is_visible).forEach((circle: CircleType) => {
+	circles.filter(isVisible).forEach((circle: CircleType) => {
 		ctx.save(); // Store canvas state
 
 		const b = circle.bbox!; // Existence checked in filter()
 		const min = transform([b[0], b[1]]);
 		const max = transform([b[2], b[3]]);
-		const diff_x = max[0] - min[0];
-		const diff_y = max[1] - min[1];
+		const diffX = max[0] - min[0];
+		const diffY = max[1] - min[1];
 
-		if (diff_x < 2 && diff_y < 2) {
+		if (diffX < 2 && diffY < 2) {
 			// Draw small rect
-			ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+			ctx.fillRect(min[0], min[1], diffX + 1, diffY + 1);
 		} else {
 			// Clip circle
 			ctx.beginPath();
@@ -144,7 +144,7 @@ function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Posi
 			ctx.clip();
 
 			// Fill bounding box, clipped to circle
-			ctx.fillRect(min[0], min[1], diff_x + 1, diff_y + 1);
+			ctx.fillRect(min[0], min[1], diffX + 1, diffY + 1);
 		}
 
 		// Restore previous state on top
