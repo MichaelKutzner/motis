@@ -89,7 +89,7 @@
 
 		map.addSource(canvasLayer, {
 			type: 'canvas',
-			canvas: canvas,
+			canvas,
 			coordinates: boxCoords,
 		});
 		map.addLayer({
@@ -149,11 +149,11 @@
 
 		// Store references
 		objects = {
-			worker: worker,
-			canvasLayer: canvasLayer,
-			circlesLayer: circlesLayer,
-			canvasSource: canvasSource,
-			circlesSource: circlesSource,
+			worker,
+			canvasLayer,
+			circlesLayer,
+			canvasSource,
+			circlesSource,
 		};
 	});
 
@@ -236,7 +236,7 @@
 				method: 'render-canvas',
 				level: currentDisplayLevel,
 				boundingBox: $state.snapshot(boundingBox),
-				dimensions: dimensions,
+				dimensions,
 				color: currentDisplayLevel == options.preferredDisplayLevel ? options.color : "magenta",
 			});
 		} else {

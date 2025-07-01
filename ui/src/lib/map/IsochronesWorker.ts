@@ -32,8 +32,8 @@ self.onmessage = async function(event) {
 			method: 'set-data',
 			index: dataIndex,
 			data: isochronesData,
-			kilometersPerSecond: kilometersPerSecond,
-			maxSeconds: maxSeconds,
+			kilometersPerSecond,
+			maxSeconds,
 		});
 	} else if (method == 'set-max-display-level') {
 		if (shapeWorker !== undefined) {
