@@ -319,6 +319,22 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
+			const updateQuery = () => {
+				const q = isochronesQuery.query;
+				pushStateWithQueryString(
+					{
+						...q,
+						...(q.one == one.label ? {} : { oneName: one.label }),
+						maxTravelTime: q.maxTravelTime * 60,
+						isochronesColor: isochronesOptions.color,
+						isochronesOpacity: isochronesOptions.opacity,
+						isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
+						isochronesMaxLevel: isochronesOptions.maxDisplayLevel
+					},
+					{},
+					true
+				);
+			};
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
@@ -341,22 +357,11 @@
 							});
 						}
 					);
+					updateQuery();
 				}, 60);
+			} else {
+				updateQuery();
 			}
-			const q = isochronesQuery.query;
-			pushStateWithQueryString(
-				{
-					...q,
-					...(q.one == one.label ? {} : { oneName: one.label }),
-					maxTravelTime: q.maxTravelTime * 60,
-					isochronesColor: isochronesOptions.color,
-					isochronesOpacity: isochronesOptions.opacity,
-					isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
-					isochronesMaxLevel: isochronesOptions.maxDisplayLevel
-				},
-				{},
-				true
-			);
 		}
 	});
 
