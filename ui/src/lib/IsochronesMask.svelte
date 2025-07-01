@@ -8,7 +8,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { type ElevationCosts, type PedestrianProfile } from '$lib/api/openapi';
 	import * as Select from '$lib/components/ui/select';
-	import type { DisplayLevel, IsochronesOptions} from '$lib/map/IsochronesShared';
+	import type { DisplayLevel, IsochronesOptions } from '$lib/map/IsochronesShared';
 	import AddressTypeahead from '$lib/AddressTypeahead.svelte';
 	import AdvancedOptions from '$lib/AdvancedOptions.svelte';
 	import DateInput from '$lib/DateInput.svelte';
@@ -39,7 +39,7 @@
 		elevationCosts = $bindable(),
 		ignorePreTransitRentalReturnConstraints = $bindable(),
 		ignorePostTransitRentalReturnConstraints = $bindable(),
-		options = $bindable(),
+		options = $bindable()
 	}: {
 		one: Location;
 		maxTravelTime: number;
@@ -74,11 +74,12 @@
 	const displayLevels = new Map<DisplayLevel, string>([
 		['OVERLAY_RECTS', t.isochrones.canvasRects],
 		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
-		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles],
+		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles]
 	]);
-	const possibleDisplayLevels = displayLevels.entries().map(([id, label]) => (
-		{value: id, label: label}
-	)).toArray();
+	const possibleDisplayLevels = displayLevels
+		.entries()
+		.map(([id, label]) => ({ value: id, label: label }))
+		.toArray();
 
 	let oneItems = $state<Array<Location>>([]);
 

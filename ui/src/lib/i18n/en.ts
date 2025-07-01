@@ -114,7 +114,7 @@ const translations: Translations = {
 		canvasRects: 'Rects (Overlay)',
 		canvasCircles: 'Circles (Overlay)',
 		geojsonCircles: 'Circles (Geometry)',
-		styling: 'Isochrones styling',
+		styling: 'Isochrones styling'
 	},
 	incline: 'Incline',
 	toll: 'Warning! A fee must be paid to use this route.',

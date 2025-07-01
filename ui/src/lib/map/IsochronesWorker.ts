@@ -5,8 +5,12 @@ import type { ShapeMessage, UpdateMessage } from '$lib/map/IsochronesShapeWorker
 import type { DisplayLevel, Geometry } from '$lib/map/IsochronesShared';
 import ShapeWorker from '$lib/map/IsochronesShapeWorker.ts?worker';
 
-export type WorkerMessage = {method: 'update-display-level', level:
-	DisplayLevel, geometry?: Geometry | undefined, index: number};
+export type WorkerMessage = {
+	method: 'update-display-level';
+	level: DisplayLevel;
+	geometry?: Geometry | undefined;
+	index: number;
+};
 type CircleType = ReturnType<typeof circle>;
 
 let canvas: OffscreenCanvas | undefined = undefined;
@@ -15,7 +19,7 @@ let shapeWorker: Worker | undefined = undefined;
 let rects: LngLatBounds[] | undefined = undefined;
 let circles: CircleType[] | undefined = undefined;
 
-self.onmessage = async function(event) {
+self.onmessage = async function (event) {
 	const method = event.data.method;
 	if (method == 'set-canvas') {
 		canvas = event.data.canvas;
@@ -27,18 +31,18 @@ self.onmessage = async function(event) {
 		dataIndex = index;
 		rects = undefined;
 		circles = undefined;
-		let worker = createWorker();
+		const worker = createWorker();
 		worker.postMessage({
 			method: 'set-data',
 			index: dataIndex,
 			data: isochronesData,
 			kilometersPerSecond,
-			maxSeconds,
+			maxSeconds
 		});
 	} else if (method == 'set-max-display-level') {
 		if (shapeWorker !== undefined) {
 			const level: DisplayLevel = event.data.maxDisplayLevel;
-			shapeWorker.postMessage({method: 'set-max-level', level: level});
+			shapeWorker.postMessage({ method: 'set-max-level', level: level });
 		}
 	} else if (method == 'render-canvas') {
 		if (!canvas) {
@@ -50,7 +54,7 @@ self.onmessage = async function(event) {
 		const level: DisplayLevel = event.data.level;
 		canvas.width = dimensions[0];
 		canvas.height = dimensions[1];
-		let ctx = canvas.getContext("2d");
+		const ctx = canvas.getContext('2d');
 		if (!ctx) {
 			return;
 		}
@@ -64,12 +68,12 @@ self.onmessage = async function(event) {
 			drawRects(ctx, transform);
 		} else if (level == 'OVERLAY_CIRCLES') {
 			const isVisible = getIsVisible(boundingBox);
-			drawCircles(ctx, transform, isVisible, dimensions);
+			drawCircles(ctx, transform, isVisible);
 		} else {
 			console.log(`Cannot render level ${level}`);
 		}
 	}
-}
+};
 
 function getTransformer(boundingBox: LngLatBounds, dimensions: [number, number]) {
 	return (pos: Position) => {
@@ -95,7 +99,7 @@ function getIsVisible(boundingBox: LngLatBounds) {
 			boundingBox._sw.lng <= b[2] &&
 			b[0] <= boundingBox._ne.lat
 		);
-	}
+	};
 }
 
 function drawRects(ctx: OffscreenCanvasRenderingContext2D, transform: (p: Position) => Position) {
@@ -115,7 +119,11 @@ function drawRects(ctx: OffscreenCanvasRenderingContext2D, transform: (p: Positi
 	});
 }
 
-function drawCircles(ctx: OffscreenCanvasRenderingContext2D, transform: (_: Position) => Position, isVisible: (_: CircleType) => boolean, dimensions: [number, number]) {
+function drawCircles(
+	ctx: OffscreenCanvasRenderingContext2D,
+	transform: (_: Position) => Position,
+	isVisible: (_: CircleType) => boolean
+) {
 	if (circles === undefined) {
 		return;
 	}
@@ -157,31 +165,48 @@ function createWorker() {
 
 	shapeWorker = new ShapeWorker();
 
-	shapeWorker.onmessage = (event: {data: ShapeMessage}) => {
+	shapeWorker.onmessage = (event: { data: ShapeMessage }) => {
 		const method = event.data.method;
 		switch (method) {
 			case 'update-shape':
-				const index = event.data.index;
-				if (index < dataIndex) {
-					console.log(`Got stale index from shape worker (Got ${index}, expected ${dataIndex})`);
-					return;
-				}
-				const msg: UpdateMessage = event.data;
-				switch (msg.level) {
-					case 'OVERLAY_RECTS':
-						rects = msg.data;
-						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
-						break;
-					case 'OVERLAY_CIRCLES':
-						circles = msg.data;
-						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level} as WorkerMessage);
-						break;
-					case 'GEOMETRY_CIRCLES':
-						const geometry = msg.data;
-						self.postMessage({method: 'update-display-level', index: dataIndex, level: msg.level, geometry: geometry} as WorkerMessage);
-						break;
-					default:
-						console.log(`Unknown message '${msg}`);
+				{
+					const index = event.data.index;
+					if (index < dataIndex) {
+						console.log(`Got stale index from shape worker (Got ${index}, expected ${dataIndex})`);
+						return;
+					}
+					const msg: UpdateMessage = event.data;
+					switch (msg.level) {
+						case 'OVERLAY_RECTS':
+							rects = msg.data;
+							self.postMessage({
+								method: 'update-display-level',
+								index: dataIndex,
+								level: msg.level
+							} as WorkerMessage);
+							break;
+						case 'OVERLAY_CIRCLES':
+							circles = msg.data;
+							self.postMessage({
+								method: 'update-display-level',
+								index: dataIndex,
+								level: msg.level
+							} as WorkerMessage);
+							break;
+						case 'GEOMETRY_CIRCLES':
+							{
+								const geometry = msg.data;
+								self.postMessage({
+									method: 'update-display-level',
+									index: dataIndex,
+									level: msg.level,
+									geometry: geometry
+								} as WorkerMessage);
+							}
+							break;
+						default:
+							console.log(`Unknown message '${msg}`);
+					}
 				}
 				break;
 			default:

@@ -1,8 +1,17 @@
 <script lang="ts">
 	import maplibregl from 'maplibre-gl';
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
+	import type { GeoJSON } from 'geojson';
 	import type { PrePostDirectMode } from '$lib/Modes';
-	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry, type IsochronesOptions, type IsochronesPos } from '$lib/map/IsochronesShared';
+	import {
+		isCanvasLevel,
+		isLess,
+		minDisplayLevel,
+		type DisplayLevel,
+		type Geometry,
+		type IsochronesOptions,
+		type IsochronesPos
+	} from '$lib/map/IsochronesShared';
 	import type { WorkerMessage } from '$lib/map/IsochronesWorker';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 
@@ -16,7 +25,7 @@
 		wheelchair,
 		maxAllTime,
 		active,
-		options,
+		options
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -28,16 +37,19 @@
 		options: IsochronesOptions;
 	} = $props();
 
-	const emptyGeometry: GeoJSON.GeoJSON = {"type":"LineString","coordinates": []};
+	const emptyGeometry: GeoJSON = { type: 'LineString', coordinates: [] };
 	// Must all exist
-	let objects = $state<{
-		worker: Worker,
-		canvasLayer: 'isochrones-canvas',
-		circlesLayer: 'isochrones-circles',
-		canvasSource: CanvasSource,
-		circlesSource: GeoJSONSource,
-	} | undefined>(undefined);
-	let circlesGeometry = $state<Geometry | GeoJSON.GeoJSON>(emptyGeometry);
+	let objects = $state<
+		| {
+				worker: Worker;
+				canvasLayer: 'isochrones-canvas';
+				circlesLayer: 'isochrones-circles';
+				canvasSource: CanvasSource;
+				circlesSource: GeoJSONSource;
+		  }
+		| undefined
+	>(undefined);
+	let circlesGeometry = $state<Geometry | GeoJSON>(emptyGeometry);
 	let bestAvailableDisplayLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
@@ -89,7 +101,7 @@
 		map.addSource(canvasLayer, {
 			type: 'canvas',
 			canvas,
-			coordinates: boxCoords,
+			coordinates: boxCoords
 		});
 		map.addLayer({
 			id: canvasLayer,
@@ -103,7 +115,7 @@
 
 		map.addSource(circlesLayer, {
 			type: 'geojson',
-			data: emptyGeometry,
+			data: emptyGeometry
 		});
 		map.addLayer({
 			id: circlesLayer,
@@ -119,21 +131,23 @@
 		// Setup worker
 		const worker = new WebWorker();
 
-		worker.onmessage = (event: {data: WorkerMessage}) => {
+		worker.onmessage = (event: { data: WorkerMessage }) => {
 			const method = event.data.method;
 			switch (method) {
 				case 'update-display-level':
-					const index = event.data.index;
-					if (index < dataIndex) {
-						console.log(`Got stale index from worker (Got ${index}, expected ${dataIndex})`);
-						return;
-					}
-					const level: DisplayLevel = event.data.level;
-					if (level == 'GEOMETRY_CIRCLES') {
-						circlesGeometry = event.data.geometry ?? emptyGeometry;
-					}
-					if (isLess(bestAvailableDisplayLevel, level)) {
-						bestAvailableDisplayLevel = level;
+					{
+						const index = event.data.index;
+						if (index < dataIndex) {
+							console.log(`Got stale index from worker (Got ${index}, expected ${dataIndex})`);
+							return;
+						}
+						const level: DisplayLevel = event.data.level;
+						if (level == 'GEOMETRY_CIRCLES') {
+							circlesGeometry = event.data.geometry ?? emptyGeometry;
+						}
+						if (isLess(bestAvailableDisplayLevel, level)) {
+							bestAvailableDisplayLevel = level;
+						}
 					}
 					break;
 				default:
@@ -141,10 +155,13 @@
 			}
 		};
 
-		worker.postMessage({
-			method: 'set-canvas',
-			canvas: offscreenCanvas,
-		}, [offscreenCanvas]);
+		worker.postMessage(
+			{
+				method: 'set-canvas',
+				canvas: offscreenCanvas
+			},
+			[offscreenCanvas]
+		);
 
 		// Store references
 		objects = {
@@ -152,7 +169,7 @@
 			canvasLayer,
 			circlesLayer,
 			canvasSource,
-			circlesSource,
+			circlesSource
 		};
 	});
 
@@ -162,13 +179,17 @@
 		}
 
 		// isochronesData and lastData might both be empty, but have different references
-		if (((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData ) || lastMaxAllTime != maxAllTime || lastSpeed != kilometersPerSecond) {
+		if (
+			((lastData.length != 0 || isochronesData.length != 0) && lastData != isochronesData) ||
+			lastMaxAllTime != maxAllTime ||
+			lastSpeed != kilometersPerSecond
+		) {
 			objects.worker.postMessage({
 				method: 'update-data',
 				index: ++dataIndex,
 				data: $state.snapshot(isochronesData),
 				kilometersPerSecond: $state.snapshot(kilometersPerSecond),
-				maxSeconds: $state.snapshot(maxAllTime),
+				maxSeconds: $state.snapshot(maxAllTime)
 			});
 
 			lastData = isochronesData;
@@ -181,7 +202,7 @@
 
 		objects.worker.postMessage({
 			method: 'set-max-display-level',
-			maxDisplayLevel: options.maxDisplayLevel,
+			maxDisplayLevel: options.maxDisplayLevel
 		});
 	});
 
@@ -189,8 +210,16 @@
 		if (!map || objects === undefined) {
 			return;
 		}
-		map.setLayoutProperty(objects.canvasLayer, 'visibility', active && isCanvasLevel(currentDisplayLevel) ? 'visible' : 'none');
-		map.setLayoutProperty(objects.circlesLayer, 'visibility', active && currentDisplayLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none');
+		map.setLayoutProperty(
+			objects.canvasLayer,
+			'visibility',
+			active && isCanvasLevel(currentDisplayLevel) ? 'visible' : 'none'
+		);
+		map.setLayoutProperty(
+			objects.circlesLayer,
+			'visibility',
+			active && currentDisplayLevel == 'GEOMETRY_CIRCLES' ? 'visible' : 'none'
+		);
 	});
 
 	$effect(() => {
@@ -222,8 +251,7 @@
 
 		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
 
-		if (nextLevel == 'NONE') {
-		} else if (isCanvasLevel(nextLevel)) {
+		if (isCanvasLevel(nextLevel)) {
 			objects.canvasSource.setCoordinates(boxCoords);
 
 			const dimensions = map._containerDimensions();
@@ -233,12 +261,10 @@
 				level: nextLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions,
-				color: nextLevel == options.preferredDisplayLevel ? options.color : "magenta",
+				color: nextLevel == options.preferredDisplayLevel ? options.color : 'magenta'
 			});
-		} else {
 		}
 
 		return nextLevel;
 	});
-
 </script>

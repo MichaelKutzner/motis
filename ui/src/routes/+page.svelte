@@ -208,8 +208,11 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		preferredDisplayLevel: urlParams?.get('isochronesPreferredLevel') as DisplayLevel ?? defaultQuery.isochronesDisplayLevel,
-		maxDisplayLevel: urlParams?.get('isochronesMaxLevel') as DisplayLevel ?? defaultQuery.isochronesDisplayLevel,
+		preferredDisplayLevel:
+			(urlParams?.get('isochronesPreferredLevel') as DisplayLevel) ??
+			defaultQuery.isochronesDisplayLevel,
+		maxDisplayLevel:
+			(urlParams?.get('isochronesMaxLevel') as DisplayLevel) ?? defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
 	});
@@ -349,7 +352,7 @@
 					isochronesColor: isochronesOptions.color,
 					isochronesOpacity: isochronesOptions.opacity,
 					isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
-					isochronesMaxLevel: isochronesOptions.maxDisplayLevel,
+					isochronesMaxLevel: isochronesOptions.maxDisplayLevel
 				},
 				{},
 				true

@@ -3,11 +3,19 @@ import { destination } from '@turf/destination';
 import { featureCollection, point } from '@turf/helpers';
 import { union } from '@turf/union';
 import { LngLatBounds } from 'maplibre-gl';
-import { isLess, type DisplayLevel, type Geometry, type IsochronesPos } from '$lib/map/IsochronesShared';
+import {
+	isLess,
+	type DisplayLevel,
+	type Geometry,
+	type IsochronesPos
+} from '$lib/map/IsochronesShared';
 
-export type UpdateMessage = {level: 'OVERLAY_RECTS', data: LngLatBounds[]} | {level: 'OVERLAY_CIRCLES', data: CircleType[]} | {level: 'GEOMETRY_CIRCLES', data: Geometry | undefined};
-export type ShapeMessage = {method: 'update-shape', index: number} & UpdateMessage;
-type RectType = {rect: LngLatBounds, distance: number, data: IsochronesPos};
+export type UpdateMessage =
+	| { level: 'OVERLAY_RECTS'; data: LngLatBounds[] }
+	| { level: 'OVERLAY_CIRCLES'; data: CircleType[] }
+	| { level: 'GEOMETRY_CIRCLES'; data: Geometry | undefined };
+export type ShapeMessage = { method: 'update-shape'; index: number } & UpdateMessage;
+type RectType = { rect: LngLatBounds; distance: number; data: IsochronesPos };
 type CircleType = ReturnType<typeof circle>;
 
 let dataIndex = 0;
@@ -20,7 +28,7 @@ let maxLevel: DisplayLevel = 'NONE';
 let working = false;
 let maxDistance = (_: IsochronesPos) => 0;
 
-self.onmessage = async function(event) {
+self.onmessage = async function (event) {
 	const method = event.data.method;
 	if (method == 'set-data') {
 		resetState(event.data.index);
@@ -28,12 +36,11 @@ self.onmessage = async function(event) {
 		const kilometersPerSecond = event.data.kilometersPerSecond;
 		const maxSeconds = event.data.maxSeconds;
 		maxDistance = getMaxDistanceFunction(kilometersPerSecond, maxSeconds);
-
 	} else if (method == 'set-max-level') {
 		maxLevel = event.data.level;
 		createShapes();
 	}
-}
+};
 
 function resetState(index: number) {
 	dataIndex = index;
@@ -65,14 +72,24 @@ async function createShapes() {
 				}
 				rects = allRects;
 				highestComputedLevel = 'OVERLAY_RECTS';
-				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.rect)} as ShapeMessage);
+				self.postMessage({
+					method: 'update-shape',
+					index: dataIndex,
+					level: 'OVERLAY_RECTS',
+					data: rects.map((r) => r.rect)
+				} as ShapeMessage);
 				await filterNotContainedRects(allRects).then((notContainedRects: RectType[]) => {
 					if (isStale()) {
 						console.log('Index got stale deleting covered rects');
 						return;
 					}
 					rects = notContainedRects;
-					self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_RECTS', data: rects.map((r) => r.rect)} as ShapeMessage);
+					self.postMessage({
+						method: 'update-shape',
+						index: dataIndex,
+						level: 'OVERLAY_RECTS',
+						data: rects.map((r) => r.rect)
+					} as ShapeMessage);
 				});
 			});
 			break;
@@ -84,7 +101,12 @@ async function createShapes() {
 				}
 				circles = allCircles;
 				highestComputedLevel = 'OVERLAY_CIRCLES';
-				self.postMessage({method: 'update-shape', index: dataIndex, level: 'OVERLAY_CIRCLES', data: circles} as ShapeMessage);
+				self.postMessage({
+					method: 'update-shape',
+					index: dataIndex,
+					level: 'OVERLAY_CIRCLES',
+					data: circles
+				} as ShapeMessage);
 			});
 			break;
 		case 'OVERLAY_CIRCLES':
@@ -95,11 +117,16 @@ async function createShapes() {
 				}
 				circleGeometry = geometry;
 				highestComputedLevel = 'GEOMETRY_CIRCLES';
-				self.postMessage({method: 'update-shape', index: dataIndex, level: 'GEOMETRY_CIRCLES', data: circleGeometry} as ShapeMessage);
+				self.postMessage({
+					method: 'update-shape',
+					index: dataIndex,
+					level: 'GEOMETRY_CIRCLES',
+					data: circleGeometry
+				} as ShapeMessage);
 			});
 			break;
 		default:
-			console.log(`Unexpected level '${highestComputedLevel}'`)
+			console.log(`Unexpected level '${highestComputedLevel}'`);
 	}
 	working = false;
 	createShapes();
@@ -112,17 +139,17 @@ async function createRects() {
 	const promises = data.map(async (pos: IsochronesPos) => {
 		const center = point([pos.lng, pos.lat]);
 		const r = maxDistance(pos);
-		const north = destination(center, r, 0, {units: "kilometers"});
-		const east = destination(center, r, 90, {units: "kilometers"});
-		const south = destination(center, r, 180, {units: "kilometers"});
-		const west = destination(center, r, -90, {units: "kilometers"});
+		const north = destination(center, r, 0, { units: 'kilometers' });
+		const east = destination(center, r, 90, { units: 'kilometers' });
+		const south = destination(center, r, 180, { units: 'kilometers' });
+		const west = destination(center, r, -90, { units: 'kilometers' });
 		return {
 			rect: LngLatBounds.convert([
 				[west.geometry.coordinates[0], south.geometry.coordinates[1]],
-				[east.geometry.coordinates[0], north.geometry.coordinates[1]],
+				[east.geometry.coordinates[0], north.geometry.coordinates[1]]
 			]),
 			distance: r,
-			data: pos,
+			data: pos
 		};
 	});
 	return await Promise.all(promises);
@@ -131,8 +158,12 @@ async function createRects() {
 function contains(larger: RectType, smaller: RectType): boolean {
 	const r1 = larger.rect;
 	const r2 = smaller.rect;
-	return r1._sw.lat <= r2._sw.lat && r1._sw.lng <= r2._sw.lng
-	    && r1._ne.lat >= r2._ne.lat && r1._ne.lng >= r2._ne.lng;
+	return (
+		r1._sw.lat <= r2._sw.lat &&
+		r1._sw.lng <= r2._sw.lng &&
+		r1._ne.lat >= r2._ne.lat &&
+		r1._ne.lng >= r2._ne.lng
+	);
 }
 
 async function filterNotContainedRects(allRects: RectType[]) {
@@ -152,7 +183,7 @@ async function createCircles() {
 		return [];
 	}
 	const promises = rects.map(async (rect: RectType) => {
-		let c = circle([rect.data.lng, rect.data.lat], rect.distance, {
+		const c = circle([rect.data.lng, rect.data.lat], rect.distance, {
 			// steps: 64,
 			units: 'kilometers'
 		});

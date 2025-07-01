@@ -104,7 +104,7 @@ const translations: Translations = {
 		canvasRects: 'Rects (Overlay)',
 		canvasCircles: 'Circles (Overlay)',
 		geojsonCircles: 'Circles (Geometry)',
-		styling: 'Isochrones styling',
+		styling: 'Isochrones styling'
 	},
 	RENTAL_BICYCLE: 'Rower współdzielony',
 	RENTAL_CARGO_BICYCLE: 'Rower cargo współdzielony',

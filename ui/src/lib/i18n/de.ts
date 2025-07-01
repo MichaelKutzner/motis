@@ -101,7 +101,7 @@ const translations: Translations = {
 		canvasRects: 'Rechtecke (Overlay)',
 		canvasCircles: 'Kreise (Overlay)',
 		geojsonCircles: 'Kreise (Geometrie)',
-		styling: 'Darstellung der Isochronen',
+		styling: 'Darstellung der Isochronen'
 	},
 	RENTAL_BICYCLE: 'Bikesharing',
 	RENTAL_CARGO_BICYCLE: 'Lastenrad Sharing',

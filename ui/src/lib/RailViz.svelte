@@ -311,7 +311,7 @@
 				map.setLayoutProperty('trips', 'visibility', visibility);
 			}
 		}
-	})
+	});
 
 	onDestroy(() => {
 		if (animation) {
