@@ -318,45 +318,44 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			if (lastOneToAllQuery == isochronesQuery) {
-				return;
-			}
-			lastOneToAllQuery = isochronesQuery;
-			clearTimeout(isochronesQueryTimeout);
-			isochronesQueryTimeout = setTimeout(() => {
-				oneToAll(isochronesQuery).then(
-					(r: { data: OneToAllResponse | undefined; error: unknown }) => {
-						if (r.error) {
-							throw new Error(String(r.error));
+			if (lastOneToAllQuery != isochronesQuery) {
+				lastOneToAllQuery = isochronesQuery;
+				clearTimeout(isochronesQueryTimeout);
+				isochronesQueryTimeout = setTimeout(() => {
+					oneToAll(isochronesQuery).then(
+						(r: { data: OneToAllResponse | undefined; error: unknown }) => {
+							if (r.error) {
+								throw new Error(String(r.error));
+							}
+							const all = r.data!.all!.map((p: ReachablePlace) => {
+								return {
+									lat: p.place?.lat,
+									lng: p.place?.lon,
+									seconds: maxTravelTime - 60 * (p.duration ?? 0),
+									name: p.place?.name
+								} as IsochronesPos;
+							});
+							untrack(() => {
+								isochronesData = [...all];
+							});
 						}
-						const all = r.data!.all!.map((p: ReachablePlace) => {
-							return {
-								lat: p.place?.lat,
-								lng: p.place?.lon,
-								seconds: maxTravelTime - 60 * (p.duration ?? 0),
-								name: p.place?.name
-							} as IsochronesPos;
-						});
-						untrack(() => {
-							isochronesData = [...all];
-						});
-					}
-				);
-				const q = isochronesQuery.query;
-				pushStateWithQueryString(
-					{
-						...q,
-						...(q.one == one.label ? {} : { oneName: one.label }),
-						maxTravelTime: q.maxTravelTime * 60,
-						isochronesColor: isochronesOptions.color,
-						isochronesOpacity: isochronesOptions.opacity,
-						isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
-						isochronesMaxLevel: isochronesOptions.maxDisplayLevel,
-					},
-					{},
-					true
-				);
-			}, 60);
+					);
+				}, 60);
+			}
+			const q = isochronesQuery.query;
+			pushStateWithQueryString(
+				{
+					...q,
+					...(q.one == one.label ? {} : { oneName: one.label }),
+					maxTravelTime: q.maxTravelTime * 60,
+					isochronesColor: isochronesOptions.color,
+					isochronesOpacity: isochronesOptions.opacity,
+					isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
+					isochronesMaxLevel: isochronesOptions.maxDisplayLevel,
+				},
+				{},
+				true
+			);
 		}
 	});
 
