@@ -53,7 +53,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
-	import type { IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
+	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
 		getFormFactors,
@@ -210,8 +210,8 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		preferredDisplayLevel: 'GEOMETRY_CIRCLES',
-		maxDisplayLevel: 'GEOMETRY_CIRCLES',
+		preferredDisplayLevel: urlParams?.get('isochronesPreferredLevel') as DisplayLevel ?? 'GEOMETRY_CIRCLES',
+		maxDisplayLevel: urlParams?.get('isochronesMaxLevel') as DisplayLevel ?? 'GEOMETRY_CIRCLES',
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
 	});
@@ -350,6 +350,8 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor: isochronesOptions.color,
 						isochronesOpacity: isochronesOptions.opacity,
+						isochronesPreferredLevel: isochronesOptions.preferredDisplayLevel,
+						isochronesMaxLevel: isochronesOptions.maxDisplayLevel,
 					},
 					{},
 					true
