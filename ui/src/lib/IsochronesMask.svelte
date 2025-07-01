@@ -71,10 +71,10 @@
 	const possibleMaxTravelTimes = minutesToSeconds([
 		1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 75, 80, 90, 120, 150, 180, 210, 240
 	]).map((s) => ({ value: s.toString(), label: formatDurationSec(s) }));
-	const displayLevels = new Map([
-		['OVERLAY_RECTS' as DisplayLevel, t.isochrones.canvasRects],
-		['OVERLAY_CIRCLES' as DisplayLevel, t.isochrones.canvasCircles],
-		['GEOMETRY_CIRCLES' as DisplayLevel, t.isochrones.geojsonCircles],
+	const displayLevels = new Map<DisplayLevel, string>([
+		['OVERLAY_RECTS', t.isochrones.canvasRects],
+		['OVERLAY_CIRCLES', t.isochrones.canvasCircles],
+		['GEOMETRY_CIRCLES', t.isochrones.geojsonCircles],
 	]);
 	const possibleDisplayLevels = displayLevels.entries().map(([id, label]) => (
 		{value: id, label: label}
