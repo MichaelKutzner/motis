@@ -3,7 +3,7 @@
 	import type { CanvasSource, GeoJSONSource, LngLatBoundsLike, Map } from 'maplibre-gl';
 	import type { PrePostDirectMode } from '$lib/Modes';
 	import { isCanvasLevel, isLess, minDisplayLevel, type DisplayLevel, type Geometry, type IsochronesOptions, type IsochronesPos } from '$lib/map/IsochronesShared';
-	import type { WorkerMessage } from './IsochronesWorker';
+	import type { WorkerMessage } from '$lib/map/IsochronesWorker';
 	import WebWorker from '$lib/map/IsochronesWorker.ts?worker';
 
 	type BoxCoordsType = [[number, number], [number, number], [number, number], [number, number]];
