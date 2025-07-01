@@ -38,7 +38,6 @@
 		circlesSource: GeoJSONSource,
 	} | undefined>(undefined);
 	let circlesGeometry = $state<Geometry | GeoJSON.GeoJSON>(emptyGeometry);
-	let currentDisplayLevel = $state<DisplayLevel>('NONE');
 	let bestAvailableDisplayLevel = $state<DisplayLevel>('NONE');
 
 	const kilometersPerSecond = $derived(
@@ -216,32 +215,30 @@
 		objects.circlesSource.setData(circlesGeometry);
 	});
 
-	$effect(() => {
+	let currentDisplayLevel = $derived.by<DisplayLevel>(() => {
 		if (!map || !active || objects === undefined) {
-			return;
+			return 'NONE';
 		}
 
 		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
 
 		if (nextLevel == 'NONE') {
-			currentDisplayLevel = nextLevel;
 		} else if (isCanvasLevel(nextLevel)) {
 			objects.canvasSource.setCoordinates(boxCoords);
 
 			const dimensions = map._containerDimensions();
 
-			currentDisplayLevel = nextLevel;
-
 			objects.worker.postMessage({
 				method: 'render-canvas',
-				level: currentDisplayLevel,
+				level: nextLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions,
-				color: currentDisplayLevel == options.preferredDisplayLevel ? options.color : "magenta",
+				color: nextLevel == options.preferredDisplayLevel ? options.color : "magenta",
 			});
 		} else {
-			currentDisplayLevel = nextLevel;
 		}
+
+		return nextLevel;
 	});
 
 </script>
