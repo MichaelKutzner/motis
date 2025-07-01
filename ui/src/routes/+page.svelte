@@ -71,8 +71,6 @@
 	const hasDark = urlParams && urlParams.has('dark');
 	const hasLight = urlParams && urlParams.has('light');
 	const isSmallScreen = browser && window.innerWidth < 768;
-	// const tabs: ('connections' | 'departures' | 'isochrones')[] = ['connections', 'departures', 'isochrones'];
-	// let activeTab = $state<'connections' | 'departures' | 'isochrones'>(tabs[Math.floor(Math.random() * tabs.length)]);
 	let activeTab = $state<'connections' | 'departures' | 'isochrones'>('connections');
 	let dataAttributionLink: string | undefined = $state(undefined);
 	let showMap = $state(!isSmallScreen);
