@@ -345,7 +345,7 @@
 								} as IsochronesPos;
 							});
 							isochronesData = [...all];
-							isochronesOptions.status = 'WORKING';
+							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
 						}
 					).catch((_: any) => isochronesOptions.status = 'FAILED');
 				}, 60);
@@ -627,7 +627,7 @@
 			{/if}
 
 			{#if activeTab == "isochrones"}
-				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'WORKING' || isochronesOptions.status == 'FAILED' ? '' : 'hide'}">
+				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'WORKING' || isochronesOptions.status == 'EMPTY' || isochronesOptions.status == 'FAILED' ? '' : 'hide'}">
 					<Card
 						class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 					>

@@ -105,6 +105,7 @@ const translations: Translations = {
 		canvasCircles: 'Circles (Overlay)',
 		geojsonCircles: 'Circles (Geometry)',
 		styling: 'Isochrones styling',
+		noData: 'No data',
 		requestFailed: 'Request failed'
 	},
 	RENTAL_BICYCLE: 'Rower współdzielony',

@@ -1,7 +1,7 @@
 import type { Feature, GeoJsonProperties, MultiPolygon, Polygon } from 'geojson';
 
 const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIRCLES'] as const;
-const StatusLevels = ['WORKING', 'DONE', 'FAILED'] as const;
+const StatusLevels = ['WORKING', 'DONE', 'EMPTY', 'FAILED'] as const;
 
 export type DisplayLevel = (typeof DisplayLevels)[number];
 export type StatusLevel = (typeof StatusLevels)[number];

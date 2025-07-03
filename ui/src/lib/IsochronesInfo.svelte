@@ -17,6 +17,9 @@
 			<LoaderCircle class="animate-spin w-12 h-12 m-2" />
 		</div>
 	{/if}
+	{#if options.status == 'EMPTY'}
+		<ErrorMessage e={t.isochrones.noData} />
+	{/if}
 	{#if options.status == 'FAILED'}
 		<ErrorMessage e={t.isochrones.requestFailed} />
 	{/if}

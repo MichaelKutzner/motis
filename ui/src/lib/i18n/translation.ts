@@ -100,6 +100,7 @@ export type Translations = {
 		canvasCircles: string;
 		geojsonCircles: string;
 		styling: string;
+		noData: string;
 		requestFailed: string;
 	};
 	RENTAL_BICYCLE: string;

@@ -102,6 +102,7 @@ const translations: Translations = {
 		canvasCircles: 'Kreise (Overlay)',
 		geojsonCircles: 'Kreise (Geometrie)',
 		styling: 'Darstellung der Isochronen',
+		noData: 'Keine Daten',
 		requestFailed: 'Anfrage fehlgeschlagen'
 	},
 	RENTAL_BICYCLE: 'Bikesharing',
