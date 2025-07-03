@@ -333,7 +333,6 @@
 					oneToAll(isochronesQuery).then(
 						(r: { data: OneToAllResponse | undefined; error: unknown }) => {
 							if (r.error) {
-								isochronesOptions.status = 'FAILED';
 								throw new Error(String(r.error));
 							}
 							const all = r.data!.all!.map((p: ReachablePlace) => {
