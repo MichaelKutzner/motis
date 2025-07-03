@@ -264,6 +264,6 @@
 		return nextLevel;
 	});
 	$effect(() => {
-		options.status = currentDisplayLevel == options.displayLevel ? 'DONE' : 'WORKING';
+		options.status = currentDisplayLevel == 'NONE' || currentDisplayLevel == options.displayLevel ? 'DONE' : 'WORKING';
 	})
 </script>
