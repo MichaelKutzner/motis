@@ -1,6 +1,7 @@
 <script lang="ts">
 	import LoaderCircle from "lucide-svelte/icons/loader-circle";
-	import type { IsochronesOptions } from "./map/IsochronesShared";
+	import ErrorMessage from "$lib/ErrorMessage.svelte";
+	import type { IsochronesOptions } from "$lib/map/IsochronesShared";
 
 
 	let {
@@ -13,12 +14,10 @@
 <div>
 	{#if options.status == 'WORKING'}
 		<div class="flex items-center justify-center w-full">
-			<LoaderCircle class="animate-spin w-12 h-12 m-20" />
+			<LoaderCircle class="animate-spin w-12 h-12 m-2" />
 		</div>
 	{/if}
 	{#if options.status == 'FAILED'}
-		<div>
-			<h3>TODO Failed</h3>
-		</div>
+		<ErrorMessage e="t.noItinerariesFound" />
 	{/if}
 </div>
