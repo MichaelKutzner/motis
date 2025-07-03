@@ -103,10 +103,7 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-2 items-center gap-2">
-		<div>
-			{t.isochrones.displayLevel}
-		</div>
+	<div class="grid grid-cols-[2fr_2fr_1fr] items-center gap-2">
 		<Select.Root type="single" bind:value={options.displayLevel}>
 			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
 				{displayLevels.get(options.displayLevel)}
@@ -119,11 +116,6 @@
 				{/each}
 			</Select.Content>
 		</Select.Root>
-	</div>
-	<div class="grid grid-cols-[1fr_2fr_1fr] items-center gap-2">
-		<div class="text-sm">
-			{t.isochrones.styling}
-		</div>
 		<Slider.Root
 			type="single"
 			min={0}
