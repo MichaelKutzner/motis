@@ -264,6 +264,8 @@
 		return nextLevel;
 	});
 	$effect(() => {
-		options.status = currentDisplayLevel == 'NONE' || currentDisplayLevel == options.displayLevel ? 'DONE' : 'WORKING';
+		options.status = isochronesData.length == 0
+			? 'EMPTY'
+			: currentDisplayLevel == 'NONE' || currentDisplayLevel == options.displayLevel ? 'DONE' : 'WORKING';
 	})
 </script>
