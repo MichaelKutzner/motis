@@ -327,8 +327,8 @@
 				lastOneToAllQuery = isochronesQuery;
 				clearTimeout(isochronesQueryTimeout);
 				isochronesQueryTimeout = setTimeout(() => {
-					oneToAll(isochronesQuery).then(
-						(r: { data: OneToAllResponse | undefined; error: unknown }) => {
+					oneToAll(isochronesQuery)
+						.then((r: { data: OneToAllResponse | undefined; error: unknown }) => {
 							if (r.error) {
 								throw new Error(String(r.error));
 							}
@@ -342,8 +342,8 @@
 							});
 							isochronesData = [...all];
 							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
-						}
-					).catch((_: any) => isochronesOptions.status = 'FAILED');
+						})
+						.catch(() => (isochronesOptions.status = 'FAILED'));
 				}, 60);
 			}
 			untrack(() => {
@@ -621,11 +621,9 @@
 				</Control>
 			{/if}
 
-			{#if activeTab == "isochrones"}
+			{#if activeTab == 'isochrones'}
 				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
-					<Card
-						class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
-					>
+					<Card class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg">
 						<IsochronesInfo options={isochronesOptions} />
 					</Card>
 				</Control>

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { t } from '$lib/i18n/translation';
-	import LoaderCircle from "lucide-svelte/icons/loader-circle";
-	import ErrorMessage from "$lib/ErrorMessage.svelte";
-	import type { IsochronesOptions } from "$lib/map/IsochronesShared";
+	import LoaderCircle from 'lucide-svelte/icons/loader-circle';
+	import ErrorMessage from '$lib/ErrorMessage.svelte';
+	import type { IsochronesOptions } from '$lib/map/IsochronesShared';
 
 	let {
 		options
