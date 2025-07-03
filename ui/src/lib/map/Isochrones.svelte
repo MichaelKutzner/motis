@@ -25,7 +25,7 @@
 		wheelchair,
 		maxAllTime,
 		active,
-		options
+		options = $bindable()
 	}: {
 		map: Map | undefined;
 		bounds: LngLatBoundsLike | undefined;
@@ -177,7 +177,7 @@
 	});
 
 	$effect(() => {
-		if (!active || objects === undefined) {
+		if (!active || options.status == 'FAILED' || objects === undefined) {
 			return;
 		}
 
@@ -257,10 +257,13 @@
 				level: nextLevel,
 				boundingBox: $state.snapshot(boundingBox),
 				dimensions,
-				color: nextLevel == options.preferredDisplayLevel ? options.color : 'magenta'
+				color: options.color
 			});
 		}
 
 		return nextLevel;
 	});
+	$effect(() => {
+		options.status = currentDisplayLevel == options.preferredDisplayLevel ? 'DONE' : 'WORKING';
+	})
 </script>

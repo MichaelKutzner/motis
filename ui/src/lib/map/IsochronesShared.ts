@@ -1,8 +1,10 @@
 import type { Feature, GeoJsonProperties, MultiPolygon, Polygon } from 'geojson';
 
 const DisplayLevels = ['NONE', 'OVERLAY_RECTS', 'OVERLAY_CIRCLES', 'GEOMETRY_CIRCLES'] as const;
+const StatusLevels = ['WORKING', 'DONE', 'FAILED'] as const;
 
 export type DisplayLevel = (typeof DisplayLevels)[number];
+export type StatusLevel = (typeof StatusLevels)[number];
 export type Geometry = Feature<Polygon | MultiPolygon, GeoJsonProperties>;
 
 export interface IsochronesOptions {
@@ -10,6 +12,7 @@ export interface IsochronesOptions {
 	maxDisplayLevel: DisplayLevel;
 	color: string;
 	opacity: number;
+	status: StatusLevel;
 }
 export interface IsochronesPos {
 	lat: number;

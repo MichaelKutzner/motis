@@ -52,6 +52,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
+	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
 	import {
@@ -213,7 +214,8 @@
 		maxDisplayLevel:
 			(urlParams?.get('isochronesMaxLevel') as DisplayLevel) ?? defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
-		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity)
+		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
+		status: 'DONE'
 	});
 
 	const toPlaceString = (l: Location) => {
@@ -621,6 +623,10 @@
 					</Card>
 				</Control>
 			{/if}
+
+			{#if activeTab == "isochrones"}
+				<IsochronesInfo options={isochronesOptions} />
+			{/if}
 		</div>
 	</div>
 
@@ -645,7 +651,7 @@
 			wheelchair={pedestrianProfile === 'WHEELCHAIR'}
 			maxAllTime={arriveBy ? maxPreTransitTime : maxPostTransitTime}
 			active={activeTab == 'isochrones'}
-			options={isochronesOptions}
+			bind:options={isochronesOptions}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
