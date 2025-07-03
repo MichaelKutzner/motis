@@ -627,7 +627,7 @@
 			{/if}
 
 			{#if activeTab == "isochrones"}
-				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'WORKING' || isochronesOptions.status == 'EMPTY' || isochronesOptions.status == 'FAILED' ? '' : 'hide'}">
+				<Control class="min-h-0 md:mb-2 {isochronesOptions.status == 'DONE' ? 'hide' : ''}">
 					<Card
 						class="w-[520px] overflow-y-auto overflow-x-hidden bg-background rounded-lg"
 					>
