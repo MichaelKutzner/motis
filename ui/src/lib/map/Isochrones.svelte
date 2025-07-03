@@ -205,7 +205,7 @@
 
 		objects.worker.postMessage({
 			method: 'set-max-display-level',
-			maxDisplayLevel: options.maxDisplayLevel
+			displayLevel: options.displayLevel
 		});
 	});
 
@@ -245,7 +245,7 @@
 			return 'NONE';
 		}
 
-		const nextLevel = minDisplayLevel(options.preferredDisplayLevel, bestAvailableDisplayLevel);
+		const nextLevel = minDisplayLevel(options.displayLevel, bestAvailableDisplayLevel);
 
 		if (isCanvasLevel(nextLevel)) {
 			objects.canvasSource.setCoordinates(boxCoords);
@@ -264,6 +264,6 @@
 		return nextLevel;
 	});
 	$effect(() => {
-		options.status = currentDisplayLevel == options.preferredDisplayLevel ? 'DONE' : 'WORKING';
+		options.status = currentDisplayLevel == options.displayLevel ? 'DONE' : 'WORKING';
 	})
 </script>

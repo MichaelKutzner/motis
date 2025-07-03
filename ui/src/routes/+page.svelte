@@ -208,11 +208,9 @@
 
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
-		preferredDisplayLevel:
-			(urlParams?.get('isochronesPreferredLevel') as DisplayLevel) ??
+		displayLevel:
+			(urlParams?.get('isochronesDisplayLevel') as DisplayLevel) ??
 			defaultQuery.isochronesDisplayLevel,
-		maxDisplayLevel:
-			(urlParams?.get('isochronesMaxLevel') as DisplayLevel) ?? defaultQuery.isochronesDisplayLevel,
 		color: urlParams?.get('isochronesColor') ?? defaultQuery.isochronesColor,
 		opacity: parseIntOr(urlParams?.get('isochronesOpacity'), defaultQuery.isochronesOpacity),
 		status: 'DONE'
@@ -320,11 +318,10 @@
 	let isochronesQueryTimeout: number;
 	$effect(() => {
 		if (isochronesQuery && activeTab == 'isochrones') {
-			const [isochronesColor, isochronesOpacity, isochronesPreferredLevel, isochronesMaxLevel] = [
+			const [isochronesColor, isochronesOpacity, isochronesDisplayLevel] = [
 				isochronesOptions.color,
 				isochronesOptions.opacity,
-				isochronesOptions.preferredDisplayLevel,
-				isochronesOptions.maxDisplayLevel
+				isochronesOptions.displayLevel
 			];
 			if (lastOneToAllQuery != isochronesQuery) {
 				lastOneToAllQuery = isochronesQuery;
@@ -358,8 +355,7 @@
 						maxTravelTime: q.maxTravelTime * 60,
 						isochronesColor,
 						isochronesOpacity,
-						isochronesPreferredLevel,
-						isochronesMaxLevel
+						isochronesDisplayLevel
 					},
 					{},
 					true

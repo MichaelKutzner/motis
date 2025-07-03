@@ -8,8 +8,7 @@ export type StatusLevel = (typeof StatusLevels)[number];
 export type Geometry = Feature<Polygon | MultiPolygon, GeoJsonProperties>;
 
 export interface IsochronesOptions {
-	preferredDisplayLevel: DisplayLevel;
-	maxDisplayLevel: DisplayLevel;
+	displayLevel: DisplayLevel;
 	color: string;
 	opacity: number;
 	status: StatusLevel;

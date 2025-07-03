@@ -103,28 +103,13 @@
 </script>
 
 {#snippet additionalComponents()}
-	<div class="grid grid-cols-4 items-center gap-2">
+	<div class="grid grid-cols-2 items-center gap-2">
 		<div>
 			{t.isochrones.displayLevel}
 		</div>
-		<Select.Root type="single" bind:value={options.preferredDisplayLevel}>
+		<Select.Root type="single" bind:value={options.displayLevel}>
 			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.displayLevel}>
-				{displayLevels.get(options.preferredDisplayLevel)}
-			</Select.Trigger>
-			<Select.Content sideOffset={10}>
-				{#each possibleDisplayLevels as level, i (i + level.value)}
-					<Select.Item value={level.value} label={level.label}>
-						{level.label}
-					</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-		<div>
-			{t.isochrones.maxComputeLevel}
-		</div>
-		<Select.Root type="single" bind:value={options.maxDisplayLevel}>
-			<Select.Trigger class="overflow-hidden" aria-label={t.isochrones.maxComputeLevel}>
-				{displayLevels.get(options.maxDisplayLevel)}
+				{displayLevels.get(options.displayLevel)}
 			</Select.Trigger>
 			<Select.Content sideOffset={10}>
 				{#each possibleDisplayLevels as level, i (i + level.value)}
