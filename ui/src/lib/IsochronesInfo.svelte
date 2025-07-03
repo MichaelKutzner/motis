@@ -14,7 +14,7 @@
 <div>
 	{#if options.status == 'WORKING'}
 		<div class="flex items-center justify-center w-full">
-			<LoaderCircle class="animate-spin w-12 h-12 m-2" />
+			<LoaderCircle class="animate-spin w-12 h-12 m-4" />
 		</div>
 	{/if}
 	{#if options.status == 'EMPTY'}
