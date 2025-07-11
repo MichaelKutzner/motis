@@ -183,20 +183,24 @@
 				}}
 			/>
 
-			{#if maxTransfers !== undefined && maxTravelTime !== undefined}
+			{#if maxTransfers !== undefined}
 				<div class="grid grid-cols-4 items-center gap-2">
 					<div class="text-sm">
 						{t.routingSegments.maxTransfers}
 					</div>
 					<NumberSelect bind:value={maxTransfers} possibleValues={possibleMaxTransfers} />
-					<div class="text-sm">
-						{t.routingSegments.maxTravelTime}
-					</div>
-					<NumberSelect
-						bind:value={maxTravelTime}
-						possibleValues={possibleMaxTravelTimes}
-						labelFormatter={formatDurationSec}
-					/>
+					{#if maxTravelTime !== undefined}
+						<div class="text-sm">
+							{t.routingSegments.maxTravelTime}
+						</div>
+						<NumberSelect
+							bind:value={maxTravelTime}
+							possibleValues={possibleMaxTravelTimes}
+							labelFormatter={formatDurationSec}
+						/>
+					{:else}
+						<div></div><div></div>
+					{/if}
 				</div>
 			{/if}
 

@@ -245,6 +245,7 @@
 							transitModes.length == possibleTransitModes.length
 								? defaultQuery.transitModes
 								: transitModes,
+						maxTransfers,
 						preTransitModes: prePostModesToModes(preTransitModes),
 						postTransitModes: prePostModesToModes(postTransitModes),
 						directModes: prePostModesToModes(directModes),
@@ -502,6 +503,7 @@
 								bind:requireCarTransport
 								bind:requireBikeTransport
 								bind:transitModes
+								bind:maxTransfers
 								bind:preTransitModes
 								bind:postTransitModes
 								bind:directModes
