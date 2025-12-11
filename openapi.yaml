@@ -1268,6 +1268,18 @@ paths:
             default: 900
             minimum: 0
 
+        - name: streetIsochrones
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+              - `NONE`: No H3 isochrones are computed
+              - `H3NODES`: Return H3 isochrones for all reachable nodes
+              - `H3PATHS`: Return H3 isochrones for all reachable nodes and ways connecting these
+          schema:
+            $ref: "#/components/schemas/StreetIsochrones"
+            default: NONE
+
       responses:
         '400':
           description: Bad Request
@@ -2407,6 +2419,19 @@ components:
         - NORMAL
         - NOT_ALLOWED
 
+    StreetIsochrones:
+      description: |
+        Use H3 hexagons to vizualise isochrones
+
+        - `NONE`: Do not compute H3 indices
+        - `H3NODES`: Compute H3 indices for reachable nodes only
+        - `H3PATHS`: Compute H3 indices for reachable nodes and ways connecting these nodes
+      type: string
+      enum:
+        - NONE
+        - H3NODES
+        - H3PATHS
+
     Place:
       type: object
       required:
@@ -2531,6 +2556,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReachablePlace"
+        h3_isochrones:
+          description: List of H3 isochrones
+          type: array
+          required: false
+          items:
+            type: integer
 
     StopTime:
       description: departure or arrival event at a stop

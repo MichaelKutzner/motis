@@ -328,6 +328,16 @@ export type VertexType = 'NORMAL' | 'BIKESHARE' | 'TRANSIT';
  */
 export type PickupDropoffType = 'NORMAL' | 'NOT_ALLOWED';
 
+/**
+ * Use H3 hexagons to vizualise isochrones
+ *
+ * - `NONE`: Do not compute H3 indices
+ * - `H3NODES`: Compute H3 indices for reachable nodes only
+ * - `H3PATHS`: Compute H3 indices for reachable nodes and ways connecting these nodes
+ *
+ */
+export type StreetIsochrones = 'NONE' | 'H3NODES' | 'H3PATHS';
+
 export type Place = {
     /**
      * name of the transit stop / PoI / address
@@ -464,6 +474,10 @@ export type Reachable = {
      * List of locations reachable by One-to-All
      */
     all?: Array<ReachablePlace>;
+    /**
+     * List of H3 isochrones
+     */
+    h3_isochrones?: Array<(number)>;
 };
 
 /**
@@ -2199,6 +2213,14 @@ export type OneToAllData = {
          *
          */
         requireCarTransport?: boolean;
+        /**
+         * Optional. Default is `NONE`.
+         * - `NONE`: No H3 isochrones are computed
+         * - `H3NODES`: Return H3 isochrones for all reachable nodes
+         * - `H3PATHS`: Return H3 isochrones for all reachable nodes and ways connecting these
+         *
+         */
+        streetIsochrones?: StreetIsochrones;
         /**
          * Optional. Defaults to the current time.
          *

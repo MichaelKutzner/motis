@@ -3,6 +3,11 @@
 #include <chrono>
 #include <vector>
 
+#include "h3api.h.in"
+#include "osr/location.h"
+#include "osr/routing/isochrones.h"
+
+#include "osr/types.h"
 #include "utl/verify.h"
 
 #include "nigiri/common/delta_t.h"
@@ -15,6 +20,7 @@
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
+#include "motis/osr/mode_to_profile.h"
 #include "motis/place.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
@@ -28,6 +34,19 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto const max_travel_minutes =
       config_.limits_.value().onetoall_max_travel_minutes_;
   auto const query = api::oneToAll_params{url.params()};
+    // TEST START
+  switch (query.streetIsochrones_) {
+    case api::StreetIsochronesEnum::NONE:
+        fmt::println("ISOCHRONES: NONE");
+        break;
+    case api::StreetIsochronesEnum::H3NODES:
+        fmt::println("ISOCHRONES: Nodes");
+        break;
+    case api::StreetIsochronesEnum::H3PATHS:
+        fmt::println("ISOCHRONES: Path");
+        break;
+  }
+    // END
   utl::verify(query.maxTravelTime_ <= max_travel_minutes,
               "maxTravelTime too large ({} > {}). The server admin can change "
               "this limit in config.yml with 'onetoall_max_travel_minutes'. "
@@ -80,6 +99,26 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
   auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
 
   auto const osr_params = get_osr_parameters(query);
+
+auto isos = std::optional<std::vector<std::int64_t>>{};
+
+std::visit(utl::overloaded{[&](osr::location const& loc){ 
+        fmt::println("GOT LOCATION"); 
+          auto const max_time = static_cast<osr::cost_t>(60*query.maxPostTransitTime_);
+        auto const pedestrian_profile = api::PedestrianProfileEnum{};
+        auto const m = api::ModeEnum::WALK;
+    auto const p = to_profile(m, pedestrian_profile, query.elevationCosts_);
+      auto const params = to_profile_parameters(p, osr_params);
+        auto const h3s = osr::isochrones_h3(params, *w_, *l_, loc, max_time, query.maxMatchingDistance_, 13);
+        isos = std::vector<std::int64_t>(0, h3s.size());
+        // isos.reserve(h3s.size());
+        fmt::print("h3s: ");
+        for (auto const& h3 : h3s) {
+            fmt::print("{:X}, ", h3);
+            isos->emplace_back(static_cast<std::int64_t>(h3));
+        }
+    }, [](tt_location) { fmt::println("NOT LOCATION"); }}, one);
+
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
   auto q = n::routing::query{
       .start_time_ = time,
@@ -158,6 +197,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
           one, time,
           query.arriveBy_ ? n::event_type::kArr : n::event_type::kDep),
       .all_ = std::move(all),
+        .h3_isochrones_ = isos,
   };
 }
 

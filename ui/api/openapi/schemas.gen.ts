@@ -371,6 +371,17 @@ export const PickupDropoffTypeSchema = {
     enum: ['NORMAL', 'NOT_ALLOWED']
 } as const;
 
+export const StreetIsochronesSchema = {
+    description: `Use H3 hexagons to vizualise isochrones
+
+- \`NONE\`: Do not compute H3 indices
+- \`H3NODES\`: Compute H3 indices for reachable nodes only
+- \`H3PATHS\`: Compute H3 indices for reachable nodes and ways connecting these nodes
+`,
+    type: 'string',
+    enum: ['NONE', 'H3NODES', 'H3PATHS']
+} as const;
+
 export const PlaceSchema = {
     type: 'object',
     required: ['name', 'lat', 'lon', 'level'],
@@ -524,6 +535,14 @@ export const ReachableSchema = {
             type: 'array',
             items: {
                 '$ref': '#/components/schemas/ReachablePlace'
+            }
+        },
+        h3_isochrones: {
+            description: 'List of H3 isochrones',
+            type: 'array',
+            required: false,
+            items: {
+                type: 'integer'
             }
         }
     }

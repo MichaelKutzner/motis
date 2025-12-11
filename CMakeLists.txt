@@ -32,7 +32,9 @@ if (MOTIS_MIMALLOC)
 endif()
 
 include(cmake/buildcache.cmake)
-include(cmake/pkg.cmake)
+# include(cmake/pkg.cmake)
+# For osr use: https://github.com/MichaelKutzner/motis-osr/tree/isochrones_h3
+add_subdirectory(deps)
 
 if (MOTIS_MIMALLOC)
     if(WIN32)
