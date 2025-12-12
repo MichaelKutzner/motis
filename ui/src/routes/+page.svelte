@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { X, Palette, Rss, Ban, LocateFixed, TrainFront } from '@lucide/svelte';
+	import { type H3Index } from 'h3-js';
 	import { getStyle } from '$lib/map/style';
 	import Map from '$lib/map/Map.svelte';
 	import Control from '$lib/map/Control.svelte';
@@ -46,6 +47,7 @@
 	import * as Tabs from '$lib/components/ui/tabs';
 	import DeparturesMask from '$lib/DeparturesMask.svelte';
 	import Isochrones from '$lib/map/Isochrones.svelte';
+	import H3Isochrones from '$lib/map/H3Isochrones.svelte';
 	import IsochronesInfo from '$lib/IsochronesInfo.svelte';
 	import type { DisplayLevel, IsochronesOptions, IsochronesPos } from '$lib/map/IsochronesShared';
 	import IsochronesMask from '$lib/IsochronesMask.svelte';
@@ -261,6 +263,7 @@
 	);
 	let slowDirect = $state(urlParams?.get('slowDirect') == 'true');
 
+	let isochronesH3s = $state<H3Index[]>([]);
 	let isochronesData = $state<IsochronesPos[]>([]);
 	let isochronesOptions = $state<IsochronesOptions>({
 		displayLevel:
@@ -365,6 +368,8 @@
 						maxPostTransitTime,
 						elevationCosts,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
+						streetIsochrones: 'H3NODES', // TODO
+						// streetIsochrones: 'H3PATHS', // TODO
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints
 					}
@@ -424,6 +429,8 @@
 									name: p.place?.name
 								} as IsochronesPos;
 							});
+							const h3s = r.data!.h3_isochrones!;
+							isochronesH3s = [...h3s];
 							isochronesData = [...all];
 							isochronesOptions.status = isochronesData.length == 0 ? 'EMPTY' : 'WORKING';
 						})
@@ -831,6 +838,7 @@
 		{/if}
 
 		<RailViz {map} {bounds} {zoom} {colorMode} />
+		<!----
 		<Isochrones
 			{map}
 			{bounds}
@@ -841,6 +849,13 @@
 			circleResolution={isochronesCircleResolution}
 			active={activeTab == 'isochrones'}
 			bind:options={isochronesOptions}
+		/>
+		<!---->
+		<H3Isochrones
+			{map}
+			data={isochronesH3s}
+			active={activeTab == 'isochrones'}
+			options={isochronesOptions}
 		/>
 
 		<Popup trigger="contextmenu" children={contextMenu} />
