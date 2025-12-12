@@ -463,6 +463,12 @@ export type ReachablePlace = {
 };
 
 /**
+ * 64 bit hexadecimal string representation of a H3 Index
+ *
+ */
+export type H3Index = string;
+
+/**
  * Object containing all reachable places by One-to-All search
  */
 export type Reachable = {
@@ -477,7 +483,7 @@ export type Reachable = {
     /**
      * List of H3 isochrones
      */
-    h3_isochrones?: Array<(number)>;
+    h3_isochrones?: Array<H3Index>;
 };
 
 /**

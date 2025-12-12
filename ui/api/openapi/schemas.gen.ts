@@ -522,6 +522,13 @@ k=2: Connection with 1 transfer
     }
 } as const;
 
+export const H3IndexSchema = {
+    type: 'string',
+    pattern: '^[0-9A-Fa-f]{1,16}$',
+    description: `64 bit hexadecimal string representation of a H3 Index
+`
+} as const;
+
 export const ReachableSchema = {
     description: 'Object containing all reachable places by One-to-All search',
     type: 'object',
@@ -542,7 +549,7 @@ export const ReachableSchema = {
             type: 'array',
             required: false,
             items: {
-                type: 'integer'
+                '$ref': '#/components/schemas/H3Index'
             }
         }
     }

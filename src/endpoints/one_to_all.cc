@@ -100,7 +100,7 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
   auto const osr_params = get_osr_parameters(query);
 
-auto isos = std::optional<std::vector<std::int64_t>>{};
+auto isos = std::optional<std::vector<std::string>>{};
 
 std::visit(utl::overloaded{[&](osr::location const& loc){ 
         fmt::println("GOT LOCATION"); 
@@ -110,12 +110,11 @@ std::visit(utl::overloaded{[&](osr::location const& loc){
     auto const p = to_profile(m, pedestrian_profile, query.elevationCosts_);
       auto const params = to_profile_parameters(p, osr_params);
         auto const h3s = osr::isochrones_h3(params, *w_, *l_, loc, max_time, query.maxMatchingDistance_, 13);
-        isos = std::vector<std::int64_t>(0, h3s.size());
-        // isos.reserve(h3s.size());
+        isos = std::vector<std::string>{};
+        isos->reserve(h3s.size());
         fmt::print("h3s: ");
         for (auto const& h3 : h3s) {
-            fmt::print("{:X}, ", h3);
-            isos->emplace_back(static_cast<std::int64_t>(h3));
+            isos->emplace_back(fmt::format("{:X}", h3));
         }
     }, [](tt_location) { fmt::println("NOT LOCATION"); }}, one);
 

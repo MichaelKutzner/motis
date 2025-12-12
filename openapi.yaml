@@ -2544,6 +2544,12 @@ components:
             k=1: Direct connection
             k=2: Connection with 1 transfer
 
+    H3Index:
+      type: string
+      pattern: "^[0-9A-Fa-f]{1,16}$"
+      description: |
+        64 bit hexadecimal string representation of a H3 Index
+
     Reachable:
       description: Object containing all reachable places by One-to-All search
       type: object
@@ -2561,7 +2567,7 @@ components:
           type: array
           required: false
           items:
-            type: integer
+            $ref: "#/components/schemas/H3Index"
 
     StopTime:
       description: departure or arrival event at a stop
