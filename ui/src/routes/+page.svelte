@@ -368,8 +368,8 @@
 						maxPostTransitTime,
 						elevationCosts,
 						maxMatchingDistance: pedestrianProfile == 'WHEELCHAIR' ? 8 : 250,
-						streetIsochrones: 'H3NODES', // TODO
-						// streetIsochrones: 'H3PATHS', // TODO
+						// streetIsochrones: 'H3NODES', // TODO
+						streetIsochrones: 'H3PATHS', // TODO
 						ignorePreTransitRentalReturnConstraints,
 						ignorePostTransitRentalReturnConstraints
 					}

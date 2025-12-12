@@ -102,14 +102,17 @@ api::Reachable one_to_all::operator()(boost::urls::url_view const& url) const {
 
 auto isos = std::optional<std::vector<std::string>>{};
 
+        // TODO
 std::visit(utl::overloaded{[&](osr::location const& loc){ 
         fmt::println("GOT LOCATION"); 
-          auto const max_time = static_cast<osr::cost_t>(60*query.maxPostTransitTime_);
+          auto const max_time = static_cast<osr::cost_t>(query.maxPostTransitTime_);
+        fmt::println("Max. isochrones duration: {}", max_time);
+        auto const nodes_only = query.streetIsochrones_ == api::StreetIsochronesEnum::H3NODES;
         auto const pedestrian_profile = api::PedestrianProfileEnum{};
         auto const m = api::ModeEnum::WALK;
     auto const p = to_profile(m, pedestrian_profile, query.elevationCosts_);
       auto const params = to_profile_parameters(p, osr_params);
-        auto const h3s = osr::isochrones_h3(params, *w_, *l_, loc, max_time, query.maxMatchingDistance_, 13);
+        auto const h3s = osr::isochrones_h3(params, *w_, *l_, loc, max_time, query.maxMatchingDistance_, 13, nodes_only);
         isos = std::vector<std::string>{};
         isos->reserve(h3s.size());
         fmt::print("h3s: ");
