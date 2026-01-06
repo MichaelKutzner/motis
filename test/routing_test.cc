@@ -13,6 +13,7 @@
 #include "gtfsrt/gtfs-realtime.pb.h"
 
 #include "utl/init_from.h"
+#include "utl/verify.h"
 
 #include "nigiri/rt/gtfsrt_update.h"
 
@@ -22,6 +23,7 @@
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
+#include "motis/endpoints/one_to_all.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
 
@@ -268,6 +270,19 @@ std::string to_str(std::vector<api::Itinerary> const& x) {
   return ss.str();
 }
 
+std::string to_str(std::optional<std::vector<api::ReachablePlace>> const& x) {
+  utl::verify(x.has_value(), "No reachable places");
+  auto ss = std::stringstream{};
+  for (auto const& j : *x) {
+    utl::verify(j.place_.has_value(), "ReachablePlace without place");
+    auto const& name = j.place_->name_;
+    utl::verify(j.k_.has_value(), "Missing k for place {}", name);
+    utl::verify(j.duration_.has_value(), "Missing duration for place {}", name);
+    ss << fmt::format("(place: {}, k: {}, duration: {}), ", name, *j.k_, *j.duration_);
+  }
+  return ss.str();
+}
+
 TEST(motis, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
@@ -346,6 +361,7 @@ TEST(motis, routing) {
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
+  auto const isochrones = utl::init_from<ep::one_to_all>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
 
   // Route direct with GBFS.
@@ -631,5 +647,32 @@ TEST(motis, routing) {
     (from=test_FFM_HAUPT_U [track=-, scheduled_track=-, level=-4], to=- [track=-, scheduled_track=-, level=0], start=2019-05-01 02:10, mode="WALK", trip="-", end=2019-05-01 02:15)
 ])",
         to_str(res.itineraries_));
+  }
+
+  // Isochrones
+  {
+    auto const base_request =
+        "?one=49.87263,8.63127"
+        "&time=2019-05-01T01:25Z"
+        "&maxTravelTime=60"
+        "&maxPostTransitTime=60"
+        "&useRoutedTransfers=true"
+      ;
+    // Base request without street last mile isochrones
+    {
+    auto const res = isochrones(base_request);
+
+    EXPECT_EQ(
+        "(place: DA Hbf, k: 0, duration: 4), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hbf, k: 1, duration: 20), "
+        "(place: FFM Hbf, k: 1, duration: 23), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hauptwache, k: 2, duration: 47), "
+        "(place: FFM Hauptwache, k: 2, duration: 45), "
+        "(place: FFM Hauptwache, k: 2, duration: 47), ",
+        to_str(res.all_));
+    }
   }
 }

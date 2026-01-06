@@ -32,7 +32,8 @@ if (MOTIS_MIMALLOC)
 endif()
 
 include(cmake/buildcache.cmake)
-include(cmake/pkg.cmake)
+# include(cmake/pkg.cmake)
+add_subdirectory(deps)
 
 if (MOTIS_MIMALLOC)
     if(WIN32)
