@@ -651,13 +651,13 @@ TEST(motis, routing) {
 
   // Isochrones
   {
-    auto const base_request =
+    auto const base_request = std::string{
         "?one=49.87263,8.63127"
         "&time=2019-05-01T01:25Z"
         "&maxTravelTime=60"
         "&maxPostTransitTime=60"
         "&useRoutedTransfers=true"
-      ;
+    };
     // Base request without street last mile isochrones
     {
     auto const res = isochrones(base_request);
@@ -673,6 +673,25 @@ TEST(motis, routing) {
         "(place: FFM Hauptwache, k: 2, duration: 45), "
         "(place: FFM Hauptwache, k: 2, duration: 47), ",
         to_str(res.all_));
+      EXPECT_TRUE(res.h3_isochrones_.has_value() && res.h3_isochrones_->empty());
+    }
+    // Simple request, one contour for last mile isochrones
+    {
+    auto const res = isochrones(base_request + "&streetIsochrones=H3NODES");
+
+    EXPECT_EQ(
+        "(place: DA Hbf, k: 0, duration: 4), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hbf, k: 1, duration: 20), "
+        "(place: FFM Hbf, k: 1, duration: 23), "
+        "(place: FFM Hbf, k: 1, duration: 25), "
+        "(place: FFM Hauptwache, k: 2, duration: 47), "
+        "(place: FFM Hauptwache, k: 2, duration: 45), "
+        "(place: FFM Hauptwache, k: 2, duration: 47), ",
+        to_str(res.all_));
+      EXPECT_TRUE(res.h3_isochrones_.has_value());
+      EXPECT_TRUE(res.h3_isochrones_->size() > 0);
     }
   }
 }
