@@ -12,6 +12,7 @@
 #endif
 #include "gtfsrt/gtfs-realtime.pb.h"
 
+#include "utl/enumerate.h"
 #include "utl/init_from.h"
 #include "utl/verify.h"
 
@@ -24,6 +25,7 @@
 #include "motis/elevators/parse_fasta.h"
 #include "motis/endpoints/routing.h"
 #include "motis/endpoints/one_to_all.h"
+#include "motis/endpoints/street_isochrones.h"
 #include "motis/gbfs/update.h"
 #include "motis/import.h"
 
@@ -262,6 +264,17 @@ void print_short(std::ostream& out, api::Itinerary const& j) {
   out << "\n]";
 }
 
+std::string to_str(api::Isochrones const& x) {
+  auto ss = std::stringstream{};
+  for (auto const [i, j] : utl::enumerate(x)) {
+    if (i > 0) {
+      ss << ", ";
+    }
+    ss << j;
+  }
+  return ss.str();
+}
+
 std::string to_str(std::vector<api::Itinerary> const& x) {
   auto ss = std::stringstream{};
   for (auto const& j : x) {
@@ -361,7 +374,8 @@ TEST(motis, routing) {
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
   auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const isochrones = utl::init_from<ep::one_to_all>(d).value();
+  auto const isochrones2 = utl::init_from<ep::one_to_all>(d).value();
+  auto const isochrones = utl::init_from<ep::street_isochrones>(d).value();
   EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
 
   // Route direct with GBFS.
@@ -651,6 +665,18 @@ TEST(motis, routing) {
 
   // Isochrones
   {
+    {
+      auto const res = isochrones(
+          "?places=49.87263;8.63127,50.11347;8.67664"
+          "&places=50;8.65"
+          "&maxDuration=900,600"
+          "&maxDuration=300"
+          "&byArrive=false");
+
+      EXPECT_EQ(
+          "H1, H2, ...",
+          to_str(res));
+    }
     auto const base_request = std::string{
         "?one=49.87263,8.63127"
         "&time=2019-05-01T01:25Z"
@@ -660,7 +686,7 @@ TEST(motis, routing) {
     };
     // Base request without street last mile isochrones
     {
-    auto const res = isochrones(base_request);
+    auto const res = isochrones2(base_request);
 
     EXPECT_EQ(
         "(place: DA Hbf, k: 0, duration: 4), "
@@ -673,11 +699,11 @@ TEST(motis, routing) {
         "(place: FFM Hauptwache, k: 2, duration: 45), "
         "(place: FFM Hauptwache, k: 2, duration: 47), ",
         to_str(res.all_));
-      EXPECT_TRUE(res.h3_isochrones_.has_value() && res.h3_isochrones_->empty());
+      // EXPECT_TRUE(res.h3_isochrones_.has_value() && res.h3_isochrones_->empty());
     }
     // Simple request, one contour for last mile isochrones
     {
-    auto const res = isochrones(base_request + "&streetIsochrones=H3NODES");
+    auto const res = isochrones2(base_request + "&streetIsochrones=H3NODES");
 
     EXPECT_EQ(
         "(place: DA Hbf, k: 0, duration: 4), "
@@ -690,8 +716,8 @@ TEST(motis, routing) {
         "(place: FFM Hauptwache, k: 2, duration: 45), "
         "(place: FFM Hauptwache, k: 2, duration: 47), ",
         to_str(res.all_));
-      EXPECT_TRUE(res.h3_isochrones_.has_value());
-      EXPECT_TRUE(res.h3_isochrones_->size() > 0);
+      // EXPECT_TRUE(res.h3_isochrones_.has_value());
+      // EXPECT_TRUE(res.h3_isochrones_->size() > 0);
     }
   }
 }

@@ -1286,18 +1286,6 @@ paths:
             default: 900
             minimum: 0
 
-        - name: streetIsochrones
-          in: query
-          required: false
-          description: |
-            Optional. Default is `NONE`.
-              - `NONE`: No H3 isochrones are computed
-              - `H3NODES`: Return H3 isochrones for all reachable nodes
-              - `H3PATHS`: Return H3 isochrones for all reachable nodes and ways connecting these
-          schema:
-            $ref: "#/components/schemas/StreetIsochrones"
-            default: NONE
-
       responses:
         '422':
           description: Unprocessable Entity
@@ -1331,6 +1319,109 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Reachable'
+
+  /api/v1/street-isochrones:
+    get:
+      tags:
+        - routing
+      summary: |
+        Simultaneous computation of street routed isochrones for multiple places.
+
+        Requests must ensure, that 'places' and 'maxDuration' have the same length, as each place requires a maximum routing duration.
+      operationId: streetIsochrones
+      parameters:
+        # # Disabled, as the parser cannot handle objects as input
+        # - name: places
+        #   in: query
+        #   required: true
+        #   description: Places to compute isochrones from or to
+        #   schema:
+        #     type: array
+        #     items:
+        #       $ref: '#/components/schemas/RoutingOffset'
+        #   explode: false
+        - name: places
+          in: query
+          required: true
+          description: |
+            Places to compute isochrones from or to
+
+            geo locations are denoted as latitude;longitude
+            The request will therefore look like that: latitude;longitude,latitude;longitude,...
+          schema:
+            type: array
+            items:
+              type: string
+          explode: false
+        - name: maxDuration
+          in: query
+          required: true
+          description: Maximum routing duration to or from this place in seconds
+          schema:
+            type: array
+            items:
+              type: integer
+          explode: true
+        - name: mode
+          in: query
+          required: false
+          description: |
+            Optional. Default is \`WALK\`
+
+            routing profile to use (currently supported: \`WALK\`, \`BIKE\`, \`CAR\`)
+          schema:
+            $ref: '#/components/schemas/Mode'
+            default: WALK
+        - name: maxMatchingDistance
+          in: query
+          required: false
+          description: |
+            Optional. Default is 25 meters.
+
+            Maximum matching distance in meters to match geo coordinates to the street network.
+          schema:
+            type: number
+            default: 25
+        - name: elevationCosts
+          in: query
+          required: false
+          description: |
+            Optional. Default is `NONE`.
+
+            Set an elevation cost profile, to penalize routes with incline.
+            - `NONE`: No additional costs for elevations. This is the default behavior
+            - `LOW`: Add a low cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if small detours are required.
+            - `HIGH`: Add a high cost for increase in elevation and incline along the way. This will prefer routes with less ascent, if larger detours are required.
+
+            As using an elevation costs profile will increase the travel duration,
+            routing through steep terrain may exceed the maximal allowed duration,
+            causing a location to appear unreachable.
+            Increasing the maximum travel time for these segments may resolve this issue.
+
+            Elevation cost profiles are currently used by following street modes:
+            - `BIKE`
+          schema:
+            $ref: '#/components/schemas/ElevationCosts'
+            default: NONE
+        - name: arriveBy
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            Optional. Default is `false`.
+
+            true = isochrones to places
+            false = isochrones from places
+      responses:
+        '200':
+          description: |
+            A list of H3 isochrones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Isochrones'
 
   /api/v1/reverse-geocode:
     get:
@@ -2573,18 +2664,31 @@ components:
         - NORMAL
         - NOT_ALLOWED
 
-    StreetIsochrones:
-      description: |
-        Use H3 hexagons to vizualise isochrones
-
-        - `NONE`: Do not compute H3 indices
-        - `H3NODES`: Compute H3 indices for reachable nodes only
-        - `H3PATHS`: Compute H3 indices for reachable nodes and ways connecting these nodes
+    H3Index:
       type: string
-      enum:
-        - NONE
-        - H3NODES
-        - H3PATHS
+      pattern: "^[0-9A-Fa-f]{1,16}$"
+      description: |
+        64 bit hexadecimal string representation of a H3 Index
+
+    Isochrones:
+      description: List of H3 indices
+      type: array
+      items:
+        $ref: "#/components/schemas/H3Index"
+
+    # RoutingOffset:
+    #   description: Possible places to route to or from
+    #   type: object
+    #   required:
+    #     - place
+    #     - maxDuration
+    #   properties:
+    #     place:
+    #       type: string
+    #       description: Place to route to or from
+    #     maxDuration:
+    #       type: integer
+    #       description: Maximum routing duration to or from this place in seconds
 
     Place:
       type: object
@@ -2676,12 +2780,6 @@ components:
           type: string
           format: date-time
 
-    H3Index:
-      type: string
-      pattern: "^[0-9A-Fa-f]{1,16}$"
-      description: |
-        64 bit hexadecimal string representation of a H3 Index
-
     ReachablePlace:
       description: Place reachable by One-to-All
       type: object
@@ -2716,14 +2814,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ReachablePlace"
-        h3_isochrones:
-          description: List of H3 isochrones
-          type: array
-          items:
-            description: List of H3 indices for each isochrone
-            type: array
-            items:
-              $ref: "#/components/schemas/H3Index"
 
     StopTime:
       description: departure or arrival event at a stop
