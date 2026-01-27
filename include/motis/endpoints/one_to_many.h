@@ -1,18 +1,24 @@
 #pragma once
 
+#include <memory>
+
 #include "boost/url/url_view.hpp"
 
-#include "motis/match_platforms.h"
-#include "motis/point_rtree.h"
 #include "utl/to_vec.h"
 
 #include "osr/routing/route.h"
 
+#include "nigiri/types.h"
+
 #include "motis-api/motis-api.h"
+
+#include "motis/data.h"
 #include "motis/fwd.h"
+#include "motis/match_platforms.h"
 #include "motis/osr/mode_to_profile.h"
 #include "motis/osr/parameters.h"
 #include "motis/parse_location.h"
+#include "motis/point_rtree.h"
 
 namespace motis::ep {
 

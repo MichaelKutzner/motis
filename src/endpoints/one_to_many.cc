@@ -1,16 +1,12 @@
 #include "motis/endpoints/one_to_many.h"
 
-#include "fmt/printf.h"
-
-#include "nigiri/routing/one_to_many.h"
-#include "nigiri/types.h"
 #include <optional>
 
-#include "motis-api/motis-api.h"
+#include "nigiri/routing/one_to_many.h"
+
 #include "motis/endpoints/routing.h"
 #include "motis/gbfs/routing_data.h"
 #include "motis/metrics_registry.h"
-#include "motis/osr/parameters.h"
 #include "motis/timetable/modes_to_clasz_mask.h"
 
 namespace motis::ep {
@@ -28,29 +24,6 @@ api::oneToManyIm_response one_to_many_im::operator()(
   metrics_->routing_requests_.Increment();
 
   auto const query = api::oneToManyIm_params{url.params()};
-
-  fmt::println("Test");
-  //   if (query.transitModes_.empty()) {
-  // fmt::println("FALLBACK");
-  //     auto v1_q = query;
-  //     v1_q.max_ = query.maxTravelTime_ ? query.maxTravelTime_ : query.max_;
-  //     v1_q.mode_ =
-  //         query.directModes_.empty() ? query.mode_ : query.directModes_[0];
-  //     // auto const v1_query = api::oneToMany_params{
-  //     //     .one_ = query.one_,
-  //     //     .many_ = query.many_,
-  //     //     .mode =
-  //     //         query.directModes_.empty() ? query.mode_ :
-  //     query.directModes_[0],
-  //     //     .arriveBy_ = query.arriveBy_,
-  //     //     .maxMatchingDistance_ = query.maxMatchingDistance_,
-  //     //     .elevationCosts_ = query.elevationCosts_,
-  //     //     .max_ = query.maxMatchingDistance_ ? query.maxMatchingDistance_
-  //     //                                        : query.max_};
-  //     return one_to_many{w_, l_, elevations_}(v1_q.to_url(""));
-  //   }
-
-  fmt::println("NEW");
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
@@ -154,7 +127,6 @@ api::oneToManyIm_response one_to_many_im::operator()(
                    ? api::Duration{.duration_ = duration->count()}
                    : api::Duration{};
       });
-  // one_to_many_handle_request(query, w_, l_, elevations_);
 }
 
 }  // namespace motis::ep
