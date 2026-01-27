@@ -2,6 +2,8 @@
 
 #include "boost/url/url_view.hpp"
 
+#include "motis/match_platforms.h"
+#include "motis/point_rtree.h"
 #include "utl/to_vec.h"
 
 #include "osr/routing/route.h"
@@ -55,6 +57,25 @@ struct one_to_many {
   osr::ways const& w_;
   osr::lookup const& l_;
   osr::elevation_storage const* elevations_;
+};
+
+struct one_to_many_im {
+  api::oneToManyIm_response operator()(boost::urls::url_view const&) const;
+
+  config const& config_;
+  osr::ways const* w_;
+  osr::lookup const* l_;
+  osr::platforms const* pl_;
+  osr::elevation_storage const* elevations_;
+  nigiri::timetable const& tt_;
+  std::shared_ptr<rt> const& rt_;
+  tag_lookup const& tags_;
+  flex::flex_areas const* fa_;
+  point_rtree<nigiri::location_idx_t> const* loc_tree_;
+  platform_matches_t const* matches_;
+  way_matches_storage const* way_matches_;
+  std::shared_ptr<gbfs::gbfs_data> const& gbfs_;
+  metrics_registry* metrics_;
 };
 
 }  // namespace motis::ep

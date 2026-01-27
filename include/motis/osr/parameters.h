@@ -25,6 +25,8 @@ osr_parameters get_osr_parameters(api::oneToMany_params const&);
 
 osr_parameters get_osr_parameters(api::OneToManyParams const&);
 
+osr_parameters get_osr_parameters(api::oneToManyIm_params const&);
+
 osr::profile_parameters to_profile_parameters(osr::search_profile,
                                               osr_parameters const&);
 }  // namespace motis
