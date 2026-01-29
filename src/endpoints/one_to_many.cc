@@ -266,4 +266,19 @@ api::oneToManyIm_response one_to_many_im2::operator()(
       });
 }
 
-}  // namespace motis::ep
+// POST
+
+api::oneToManyIm_response one_to_many_im_post::operator()(
+    api::OneToManyImParams const& query) const {
+    fmt::println("GOT POST");
+    fmt::println("One: {}  Many: {}", query.one_, query.many_);
+        return {};
+}
+api::oneToManyIm_response one_to_many_im2_post::operator()(
+    api::OneToManyImParams const& query) const {
+    fmt::println("GOT POST");
+    fmt::println("One: {}  Many: {}", query.one_, query.many_);
+        return {};
+}
+
+}  // namespace motis::epu
