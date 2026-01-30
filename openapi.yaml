@@ -1634,24 +1634,24 @@ paths:
         - name: requireBikeTransport
           in: query
           required: false
-          schema:
-            type: boolean
-            default: false
           description: |
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow bike carriage.
+          schema:
+            type: boolean
+            default: false
 
         - name: requireCarTransport
           in: query
           required: false
-          schema:
-            type: boolean
-            default: false
           description: |
             Optional. Default is `false`.
 
             If set to `true`, all used transit trips are required to allow car carriage.
+          schema:
+            type: boolean
+            default: false
 
       responses:
         "200":
@@ -4504,6 +4504,13 @@ components:
             it can lead to slow routing performance.
           type: integer
         maxTransferTime:
+          description: |
+            Optional. Default is 0 minutes.
+
+            Minimum transfer time for each transfer in minutes.
+          type: integer
+          default: 0
+        minTransferTime:
           description: |
             Optional. Default is 0 minutes.
 

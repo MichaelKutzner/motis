@@ -114,10 +114,10 @@ struct motis_instance {
     GET<ep::one_to_all>("/api/experimental/one-to-all", d);
     GET<ep::one_to_all>("/api/v1/one-to-all", d);
     GET<ep::one_to_many>("/api/v1/one-to-many", d);
+    GET<ep::one_to_many_im2>("/api/experimental/one-to-many-in2", d);
     GET<ep::one_to_many_im>("/api/experimental/one-to-many-im", d);
-    GET<ep::one_to_many_im2>("/api/experimental/one-to-many-im2", d);
+    POST<ep::one_to_many_im2_post>("/api/experimental/one-to-many-in2", d);
     POST<ep::one_to_many_im_post>("/api/experimental/one-to-many-im", d);
-    POST<ep::one_to_many_im2_post>("/api/experimental/one-to-many-im2", d);
     POST<ep::one_to_many_post>("/api/v1/one-to-many", d);
 
     if (!c.requires_rt_timetable_updates()) {

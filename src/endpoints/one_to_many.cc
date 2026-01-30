@@ -21,11 +21,10 @@ api::oneToMany_response one_to_many::operator()(
   return one_to_many_handle_request(query, w_, l_, elevations_);
 }
 
-api::oneToManyIm_response one_to_many_im::operator()(
-    boost::urls::url_view const& url) const {
-  metrics_->routing_requests_.Increment();
-
-  auto const query = api::oneToManyIm_params{url.params()};
+template <typename Endpoint, typename Query>
+api::oneToManyIm_response run_one_to_many_im(Endpoint const& ep,
+                                             Query const& query) {
+  ep.metrics_->routing_requests_.Increment();
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
@@ -46,8 +45,8 @@ api::oneToManyIm_response one_to_many_im::operator()(
       query.arriveBy_ ? query.preTransitModes_ : query.postTransitModes_);
   auto const max_travel_time_limit = std::min(
       std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
-      std::chrono::seconds{
-          config_.limits_.value().street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{ep.config_.limits_.value()
+                               .street_routing_max_prepost_transit_seconds_});
   auto const one_max_time =
       std::min(std::chrono::seconds{query.arriveBy_ ? query.maxPostTransitTime_
                                                     : query.maxPreTransitTime_},
@@ -61,11 +60,12 @@ api::oneToManyIm_response one_to_many_im::operator()(
   auto const many_dir =
       query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward;
 
-  auto const r = routing{
-      config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
-      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
-      gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
+                         ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
+                         ep.loc_tree_,   ep.fa_,  ep.matches_, ep.way_matches_,
+                         ep.rt_,         nullptr, ep.gbfs_,    nullptr,
+                         nullptr,        nullptr, nullptr,     ep.metrics_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{ep.w_, ep.l_, ep.gbfs_};
 
   auto const osr_params = get_osr_parameters(query);
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
@@ -78,8 +78,6 @@ api::oneToManyIm_response one_to_many_im::operator()(
                          query.maxMatchingDistance_, gbfs_rd, prepare_stats);
   });
 
-  fmt::println("One: {}  Many: {}", one->pos_,
-               utl::to_vec(many, [](auto&& p) { return p.pos_; }));
   auto q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(*one),
@@ -115,14 +113,15 @@ api::oneToManyIm_response one_to_many_im::operator()(
               .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
 
-  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
+  if (ep.tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
     q.prf_idx_ = 0U;
   }
   auto const durations =
-      query.arriveBy_ ? n::routing::one_to_many<n::direction::kBackward>(
-                            tt_, nullptr, many_offsets, q)  // TODO Support RT
-                      : n::routing::one_to_many<n::direction::kForward>(
-                            tt_, nullptr, many_offsets, q);
+      query.arriveBy_
+          ? n::routing::one_to_many<n::direction::kBackward>(
+                ep.tt_, nullptr, many_offsets, q)  // TODO Support RT
+          : n::routing::one_to_many<n::direction::kForward>(ep.tt_, nullptr,
+                                                            many_offsets, q);
   return utl::to_vec(
       durations, [&](std::optional<n::duration_t> const duration) {
         return duration.has_value()
@@ -131,11 +130,10 @@ api::oneToManyIm_response one_to_many_im::operator()(
       });
 }
 
-api::oneToManyIm_response one_to_many_im2::operator()(
-    boost::urls::url_view const& url) const {
-  metrics_->routing_requests_.Increment();
-
-  auto const query = api::oneToManyIm_params{url.params()};
+template <typename Endpoint, typename Query>
+api::oneToManyIm_response run_one_to_many_im2(Endpoint const& ep,
+                                              Query const& query) {
+  ep.metrics_->routing_requests_.Increment();
 
   auto const time = std::chrono::time_point_cast<std::chrono::minutes>(
       *query.time_.value_or(openapi::now()));
@@ -156,8 +154,8 @@ api::oneToManyIm_response one_to_many_im2::operator()(
       query.arriveBy_ ? query.preTransitModes_ : query.postTransitModes_);
   auto const max_travel_time_limit = std::min(
       std::chrono::duration_cast<std::chrono::seconds>(max_travel_time),
-      std::chrono::seconds{
-          config_.limits_.value().street_routing_max_prepost_transit_seconds_});
+      std::chrono::seconds{ep.config_.limits_.value()
+                               .street_routing_max_prepost_transit_seconds_});
   auto const one_max_time =
       std::min(std::chrono::seconds{query.arriveBy_ ? query.maxPostTransitTime_
                                                     : query.maxPreTransitTime_},
@@ -171,11 +169,12 @@ api::oneToManyIm_response one_to_many_im2::operator()(
   auto const many_dir =
       query.arriveBy_ ? osr::direction::kForward : osr::direction::kBackward;
 
-  auto const r = routing{
-      config_, w_,        l_,      pl_,      elevations_,  &tt_,    nullptr,
-      &tags_,  loc_tree_, fa_,     matches_, way_matches_, rt_,     nullptr,
-      gbfs_,   nullptr,   nullptr, nullptr,  nullptr,      metrics_};
-  auto gbfs_rd = gbfs::gbfs_routing_data{w_, l_, gbfs_};
+  auto const r = routing{ep.config_,     ep.w_,   ep.l_,       ep.pl_,
+                         ep.elevations_, &ep.tt_, nullptr,     &ep.tags_,
+                         ep.loc_tree_,   ep.fa_,  ep.matches_, ep.way_matches_,
+                         ep.rt_,         nullptr, ep.gbfs_,    nullptr,
+                         nullptr,        nullptr, nullptr,     ep.metrics_};
+  auto gbfs_rd = gbfs::gbfs_routing_data{ep.w_, ep.l_, ep.gbfs_};
 
   auto const osr_params = get_osr_parameters(query);
   auto prepare_stats = std::map<std::string, std::uint64_t>{};
@@ -188,8 +187,6 @@ api::oneToManyIm_response one_to_many_im2::operator()(
                          query.maxMatchingDistance_, gbfs_rd, prepare_stats);
   });
 
-  fmt::println("One: {}  Many: {}", one->pos_,
-               utl::to_vec(many, [](auto&& p) { return p.pos_; }));
   auto q = n::routing::query{
       .start_time_ = time,
       .start_match_mode_ = get_match_mode(*one),
@@ -225,22 +222,22 @@ api::oneToManyIm_response one_to_many_im2::operator()(
               .factor_ = static_cast<float>(query.transferTimeFactor_)},
   };
 
-  if (tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
+  if (ep.tt_.locations_.footpaths_out_.at(q.prf_idx_).empty()) {
     q.prf_idx_ = 0U;
   }
   // Up to now same as one_to_many_im
   auto const state =
       query.arriveBy_
           ? n::routing::one_to_all<n::direction::kBackward>(
-                tt_, nullptr, q)  // TODO Support RT
-          : n::routing::one_to_all<n::direction::kForward>(tt_, nullptr, q);
+                ep.tt_, nullptr, q)  // TODO Support RT
+          : n::routing::one_to_all<n::direction::kForward>(ep.tt_, nullptr, q);
 
   auto const unreachable = query.arriveBy_
                                ? nigiri::kInvalidDelta<n::direction::kBackward>
                                : nigiri::kInvalidDelta<n::direction::kForward>;
-  auto reachable = nigiri::bitvec{tt_.n_locations()};
-  for (auto i = 0U; i != tt_.n_locations(); ++i) {
-    if (state.get_best<0>()[i][0] != unreachable) {
+  auto reachable = nigiri::bitvec{ep.tt_.n_locations()};
+  for (auto i = 0U; i != ep.tt_.n_locations(); ++i) {
+    if (state.template get_best<0>()[i][0] != unreachable) {
       reachable.set(i);
     }
   }
@@ -254,7 +251,7 @@ api::oneToManyIm_response one_to_many_im2::operator()(
           auto const loc = offset.target();
           if (reachable.test(to_idx(loc))) {
             auto const fastest = n::routing::get_fastest_one_to_all_offsets(
-                tt_, state, dir, loc, time, q.max_transfers_);
+                ep.tt_, state, dir, loc, time, q.max_transfers_);
             auto const total = static_cast<n::delta_t>(
                 fastest.duration_ + offset.duration().count());
             if (total < best) {
@@ -266,19 +263,31 @@ api::oneToManyIm_response one_to_many_im2::operator()(
       });
 }
 
+api::oneToManyIm_response one_to_many_im::operator()(
+    boost::urls::url_view const& url) const {
+  fmt::println("GET(1)");
+  auto const query = api::oneToManyIm_params{url.params()};
+  return run_one_to_many_im(*this, query);
+}
+
+api::oneToManyIm_response one_to_many_im2::operator()(
+    boost::urls::url_view const& url) const {
+  fmt::println("GET(2)");
+  auto const query = api::oneToManyIm_params{url.params()};
+  return run_one_to_many_im2(*this, query);
+}
+
 // POST
 
 api::oneToManyIm_response one_to_many_im_post::operator()(
     api::OneToManyImParams const& query) const {
-    fmt::println("GOT POST");
-    fmt::println("One: {}  Many: {}", query.one_, query.many_);
-        return {};
+  fmt::println("POST(1)");
+  return run_one_to_many_im(*this, query);
 }
 api::oneToManyIm_response one_to_many_im2_post::operator()(
     api::OneToManyImParams const& query) const {
-    fmt::println("GOT POST");
-    fmt::println("One: {}  Many: {}", query.one_, query.many_);
-        return {};
+  fmt::println("POST(2)");
+  return run_one_to_many_im2(*this, query);
 }
 
-}  // namespace motis::epu
+}  // namespace motis::ep
