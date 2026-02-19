@@ -36,7 +36,9 @@ api::oneToMany_response one_to_many_direct(
     osr_parameters const& params,
     api::PedestrianProfileEnum const pedestrian_profile,
     api::ElevationCostsEnum const elevation_costs,
-    osr::elevation_storage const* elevations_) {
+    osr::elevation_storage const* elevations_,
+    bool with_distance) {
+
   utl::verify(mode == api::ModeEnum::BIKE || mode == api::ModeEnum::CAR ||
                   mode == api::ModeEnum::WALK,
               "mode {} not supported for one-to-many",
@@ -46,11 +48,17 @@ api::oneToMany_response one_to_many_direct(
   auto const paths =
       osr::route(to_profile_parameters(profile, params), w, l, profile, one,
                  many, max_direct_time, dir, max_matching_distance, nullptr,
-                 nullptr, elevations_);
+                 nullptr, elevations_, [&](auto&&) { return with_distance; });
 
-  return utl::to_vec(paths, [](std::optional<osr::path> const& p) {
-    return p.has_value() ? api::Duration{.duration_ = p->cost_}
-                         : api::Duration{};
+  return utl::to_vec(paths, [&](std::optional<osr::path> const& p) {
+    return p
+        .transform([&](osr::path const& x) {
+          return api::Duration{.duration_ = x.cost_,
+                               .distance_ = with_distance
+                                                ? std::optional{x.dist_}
+                                                : std::nullopt};
+        })
+        .value_or(api::Duration{});
   });
 }
 
@@ -243,7 +251,7 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
                 query.arriveBy_ ? osr::direction::kBackward
                                 : osr::direction::kForward,
                 osr_params, pedestrian_profile, elevation_costs,
-                ep.elevations_);
+                ep.elevations_, false);
           })
           .value_or(api::oneToManyIntermodal_response{many.size()});
 
