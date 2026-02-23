@@ -238,11 +238,23 @@ api::oneToManyIntermodal_response run_one_to_many_intermodal(
   auto const elevation_costs =
       query.elevationCosts_.value_or(api::ElevationCostsEnum::NONE);
   auto const osr_params = get_osr_parameters(query);
+  //fmt::println("O2MI BBBB");
+  //fmt::println("Has value: {}", query.directModes_.has_value());
 
   // Get street routing durations
-  utl::verify<net::bad_request_exception>(
+
+  //std::cout << "START!!!!\n\n" << std::endl;
+/*  utl::verify<net::bad_request_exception>(
       !query.directModes_.has_value() || query.directModes_->size() == 1,
       "Only one direct mode supported. Got {}", query.directModes_->size());
+*/
+
+  utl::verify<net::bad_request_exception>(
+      !query.directModes_.has_value() || query.directModes_->size() == 1,
+      "Only one direct mode supported. Got {}", query.directModes_.has_value() ? query.directModes_->size() : 0);
+
+  //fmt::println("O2MI CCCC");
+  //std::cout << "HELLO!!!!\n\n" << std::endl;
   auto durations =
       query.directModes_
           .transform([&](std::vector<api::ModeEnum> const& direct_modes) {
