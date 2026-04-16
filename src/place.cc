@@ -1,5 +1,6 @@
 #include "motis/place.h"
 
+#include <optional>
 #include <variant>
 
 #include "utl/verify.h"
@@ -35,7 +36,8 @@ api::Place to_place(osr::location const l,
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
-      .level_ = l.lvl_.to_float(),
+      .level_ =
+          l.lvl_.has_level() ? std::optional{l.lvl_.to_float()} : std::nullopt,
       .tz_ = tz,
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
@@ -57,7 +59,9 @@ double get_level(osr::ways const* w,
 }
 
 osr::location get_location(api::Place const& p) {
-  return {{p.lat_, p.lon_}, osr::level_t{static_cast<float>(p.level_)}};
+  return {{p.lat_, p.lon_},
+          p.level_.has_value() ? osr::level_t{static_cast<float>(*p.level_)}
+                               : osr::level_t{osr::kNoLevel}};
 }
 
 osr::location get_location(n::timetable const* tt,

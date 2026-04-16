@@ -3368,7 +3368,6 @@ components:
         - name
         - lat
         - lon
-        - level
       properties:
         name:
           description: name of the transit stop / PoI / address
@@ -3389,7 +3388,13 @@ components:
           description: longitude
           type: number
         level:
-          description: level according to OpenStreetMap
+          description: |
+            level according to OpenStreetMap
+            If no level is given, the field will be unset.
+
+            For older versions, this field is defaulted to 0, this includes:
+              - /plan/v1 - /plan/v5
+              - TODO
           type: number
         tz:
           description: timezone name (e.g. "Europe/Berlin")
