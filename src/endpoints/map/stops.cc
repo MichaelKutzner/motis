@@ -7,6 +7,7 @@
 
 #include "motis/journey_to_response.h"
 #include "motis/parse_location.h"
+#include "motis/server.h"
 #include "motis/tag_lookup.h"
 
 namespace json = boost::json;
@@ -23,13 +24,14 @@ api::stops_response stops::operator()(boost::urls::url_view const& url) const {
   utl::verify<net::bad_request_exception>(
       max.has_value(), "max not a coordinate: {}request_exception", query.max_);
   auto res = api::stops_response{};
+  unsigned const api_version = get_api_version(url);
 
   auto const max_results = config_.get_limits().stops_max_results_;
   loc_rtree_.find({min->pos_, max->pos_}, [&](n::location_idx_t const l) {
     utl::verify<net::too_many_exception>(res.size() < max_results,
                                          "too many items");
     res.emplace_back(to_place(&tt_, &tags_, w_, pl_, matches_, ae_, tz_,
-                              query.language_, tt_location{l}));
+                              query.language_, tt_location{l}, api_version));
   });
   return res;
 }

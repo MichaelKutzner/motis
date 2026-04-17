@@ -23,7 +23,8 @@ struct flex_output : public output {
               tag_lookup const&,
               nigiri::timetable const&,
               flex_areas const&,
-              mode_id);
+              mode_id,
+              unsigned const api_version);
   ~flex_output() override;
 
   api::ModeEnum get_mode() const override;
@@ -54,6 +55,7 @@ private:
   flex::flex_routing_data flex_routing_data_;
   osr::sharing_data sharing_data_;
   mode_id mode_id_;
+  unsigned api_version_;
 };
 
 }  // namespace motis::flex

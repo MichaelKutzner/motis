@@ -539,7 +539,8 @@ std::pair<std::vector<api::Itinerary>, n::duration_t> routing::route_direct(
           osr::direction::kForward, max);
       for (auto const& [_, ids] : routings) {
         route_with_profile(flex::flex_output{*w_, *l_, pl_, matches_, ae_, tz_,
-                                             *tags_, *tt_, *fa_, ids.front()});
+                                             *tags_, *tt_, *fa_, ids.front(),
+                                             api_version});
       }
     } else if (m == api::ModeEnum::CAR || m == api::ModeEnum::BIKE ||
                m == api::ModeEnum::CAR_PARKING ||
@@ -701,8 +702,10 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
   auto const direct_modes = deduplicate(query.directModes_);
   auto const from = get_place(tt_, tags_, query.fromPlace_);
   auto const to = get_place(tt_, tags_, query.toPlace_);
-  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from);
-  auto to_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to);
+  auto from_p = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from,
+                         api_version);
+  auto to_p =
+      to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to, api_version);
   if (from_p.vertexType_ == api::VertexTypeEnum::NORMAL) {
     from_p.name_ = "START";
   }
@@ -1063,11 +1066,12 @@ api::plan_response routing::operator()(boost::urls::url_view const& url) const {
     };
   }
 
-  return {
-      .from_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from),
-      .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to),
-      .direct_ = std::move(direct),
-      .itineraries_ = {}};
+  return {.from_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, from,
+                            api_version),
+          .to_ = to_place(tt_, tags_, w_, pl_, matches_, ae_, tz_, lang, to,
+                          api_version),
+          .direct_ = std::move(direct),
+          .itineraries_ = {}};
 }
 
 }  // namespace motis::ep

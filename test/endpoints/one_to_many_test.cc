@@ -737,7 +737,7 @@ TEST(one_to_many, street_routing) {
         "&withDistance=true");
 
     auto const plan_durations = plan(d)(
-        "/api/v5/plan"
+        // "/api/v6/plan"
         "?fromPlace=49.8724891,8.6281994"
         "&toPlace=49.874793,8.632167"
         "&time=2019-05-01T12:00:00.000%2B02:00"

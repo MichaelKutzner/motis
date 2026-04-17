@@ -31,13 +31,15 @@ tt_location::tt_location(nigiri::location_idx_t const l,
 
 api::Place to_place(osr::location const l,
                     std::string_view name,
-                    std::optional<std::string> const& tz) {
+                    std::optional<std::string> const& tz,
+                    unsigned const api_version) {
   return {
       .name_ = std::string{name},
       .lat_ = l.pos_.lat_,
       .lon_ = l.pos_.lng_,
-      .level_ =
-          l.lvl_.has_level() ? std::optional{l.lvl_.to_float()} : std::nullopt,
+      .level_ = (l.lvl_.has_level() || (0 < api_version && api_version <= 5))
+                    ? std::optional{l.lvl_.to_float()}
+                    : std::nullopt,
       .tz_ = tz,
       .vertexType_ = api::VertexTypeEnum::NORMAL,
   };
@@ -106,6 +108,7 @@ api::Place to_place(n::timetable const* tt,
                     tz_map_t const* tz_map,
                     n::lang_t const& lang,
                     place_t const l,
+                    unsigned const api_version,  // TODO Move
                     place_t const start,
                     place_t const dest,
                     std::string_view name,
@@ -113,7 +116,7 @@ api::Place to_place(n::timetable const* tt,
   return std::visit(
       utl::overloaded{
           [&](osr::location const& l) {
-            return to_place(l, name, fallback_tz);
+            return to_place(l, name, fallback_tz, api_version);
           },
           [&](tt_location const tt_l) -> api::Place {
             utl::verify(tt && tags, "resolving stops requires timetable");
@@ -122,13 +125,13 @@ api::Place to_place(n::timetable const* tt,
             if (l == n::get_special_station(n::special_station::kStart)) {
               if (std::holds_alternative<osr::location>(start)) {
                 return to_place(std::get<osr::location>(start), "START",
-                                fallback_tz);
+                                fallback_tz, api_version);
               }
               l = std::get<tt_location>(start).l_;
             } else if (l == n::get_special_station(n::special_station::kEnd)) {
               if (std::holds_alternative<osr::location>(dest)) {
                 return to_place(std::get<osr::location>(dest), "END",
-                                fallback_tz);
+                                fallback_tz, api_version);
               }
               l = std::get<tt_location>(dest).l_;
             }
@@ -188,13 +191,14 @@ api::Place to_place(n::timetable const* tt,
                     tz_map_t const* tz_map,
                     n::lang_t const& lang,
                     n::rt::run_stop const& s,
+                    unsigned const api_version,
                     place_t const start,
                     place_t const dest) {
   auto const run_cancelled = s.fr_->is_cancelled();
   auto const fallback_tz = s.get_tz_name(
       s.stop_idx_ == 0 ? n::event_type::kDep : n::event_type::kArr);
   auto p = to_place(tt, tags, w, pl, matches, ae, tz_map, lang, tt_location{s},
-                    start, dest, "", fallback_tz);
+                    api_version, start, dest, "", fallback_tz);
   p.pickupType_ = !run_cancelled && s.in_allowed()
                       ? api::PickupDropoffTypeEnum::NORMAL
                       : api::PickupDropoffTypeEnum::NOT_ALLOWED;

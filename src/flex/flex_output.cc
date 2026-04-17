@@ -44,7 +44,8 @@ flex_output::flex_output(osr::ways const& w,
                          tag_lookup const& tags,
                          n::timetable const& tt,
                          flex_areas const& fa,
-                         mode_id const id)
+                         mode_id const id,
+                         unsigned const api_version)
     : w_{w},
       pl_{pl},
       matches_{matches},
@@ -55,7 +56,8 @@ flex_output::flex_output(osr::ways const& w,
       fa_{fa},
       sharing_data_{flex::prepare_sharing_data(
           tt, w, l, pl, fa, matches, id, id.get_dir(), flex_routing_data_)},
-      mode_id_(id) {}
+      mode_id_(id),
+      api_version_{api_version} {}
 
 flex_output::~flex_output() = default;
 
@@ -115,7 +117,7 @@ void flex_output::annotate_leg(n::lang_t const& lang,
     if (w_.is_additional_node(n)) {
       auto const l = flex_routing_data_.get_additional_node(n);
       p = to_place(&tt_, &tags_, &w_, pl_, matches_, ae_, tz_, lang,
-                   tt_location{l});
+                   tt_location{l}, api_version_);
     }
   };
   write_node_info(leg.from_, from);

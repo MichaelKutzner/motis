@@ -435,7 +435,8 @@ void add_place(auto const& t,
                std::string_view language,
                n::lang_t const& lang,
                pugi::xml_node places_node,
-               api::Place const& p) {
+               api::Place const& p,
+               unsigned const api_version) {
   auto const unique_id =
       p.stopId_.value_or(fmt::format("{},{}", p.lat_, p.lon_));
   if (!already_added.insert(unique_id).second) {
@@ -447,7 +448,9 @@ void add_place(auto const& t,
               to_place(maybe_ref(t.tt_), maybe_ref(t.tags_), t.w_, t.pl_,
                        t.matches_, t.ae_, t.tz_, lang,
                        tt_location{maybe_deref(t.tags_).get_location(
-                           maybe_deref(t.tt_), *p.parentId_)}));
+                           maybe_deref(t.tt_), *p.parentId_)},
+                       api_version),
+              api_version);
   }
 
   auto place = places_node.append_child("Place");
@@ -476,16 +479,19 @@ void append_leg_places(auto const& t,
                        n::lang_t const& lang,
                        pugi::xml_node places_node,
                        api::Leg const& leg,
-                       bool const include_calls) {
+                       bool const include_calls,
+                       unsigned const api_version) {
   for (auto const& stop : {leg.from_, leg.to_}) {
     if (stop.stopId_.has_value()) {
-      add_place(t, already_added, language, lang, places_node, stop);
+      add_place(t, already_added, language, lang, places_node, stop,
+                api_version);
     }
   }
 
   if (include_calls && leg.intermediateStops_.has_value()) {
     for (auto const& stop : *leg.intermediateStops_) {
-      add_place(t, already_added, language, lang, places_node, stop);
+      add_place(t, already_added, language, lang, places_node, stop,
+                api_version);
     }
   }
 }
@@ -499,7 +505,8 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
                                             bool const include_service,
                                             bool const include_track,
                                             bool const include_places,
-                                            bool const include_situations) {
+                                            bool const include_situations,
+                                            unsigned const api_version) {
   auto [doc, service_delivery] = create_ojp_response();
 
   auto delivery = service_delivery.append_child("OJPTripInfoDelivery");
@@ -516,7 +523,7 @@ pugi::xml_document build_trip_info_response(trip const& trip_ep,
       auto already_added = hash_set<std::string>{};
       auto places_node = ctx.append_child("Places");
       append_leg_places(trip_ep, already_added, language, lang, places_node,
-                        leg, include_calls);
+                        leg, include_calls, api_version);
     }
 
     if (include_situations) {
@@ -612,7 +619,8 @@ pugi::xml_document build_stop_event_response(
     bool const include_previous_calls,
     bool const include_onward_calls,
     bool const include_situations,
-    api::stoptimes_response const& stop_times_res) {
+    api::stoptimes_response const& stop_times_res,
+    unsigned const api_version) {
   auto [doc, service_delivery] = create_ojp_response();
 
   auto delivery = service_delivery.append_child("OJPStopEventDelivery");
@@ -627,15 +635,18 @@ pugi::xml_document build_stop_event_response(
     auto added = hash_set<std::string>{};
 
     for (auto const& st : stop_times_res.stopTimes_) {
-      add_place(stop_times_ep, added, language, lang, places_node, st.place_);
+      add_place(stop_times_ep, added, language, lang, places_node, st.place_,
+                api_version);
       if (include_previous_calls && st.previousStops_.has_value()) {
         for (auto const& p : *st.previousStops_) {
-          add_place(stop_times_ep, added, language, lang, places_node, p);
+          add_place(stop_times_ep, added, language, lang, places_node, p,
+                    api_version);
         }
       }
       if (include_onward_calls && st.nextStops_.has_value()) {
         for (auto const& p : *st.nextStops_) {
-          add_place(stop_times_ep, added, language, lang, places_node, p);
+          add_place(stop_times_ep, added, language, lang, places_node, p,
+                    api_version);
         }
       }
     }
@@ -735,7 +746,8 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
                                        api::plan_response const& plan_res,
                                        bool const include_track_sections,
                                        bool const include_leg_projection,
-                                       bool const include_intermediate_stops) {
+                                       bool const include_intermediate_stops,
+                                       unsigned const api_version) {
   auto [doc, service_delivery] = create_ojp_response();
 
   auto delivery = service_delivery.append_child("OJPTripDelivery");
@@ -749,7 +761,7 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
   for (auto const& it : plan_res.itineraries_) {
     for (auto const& leg : it.legs_) {
       append_leg_places(routing_ep, added, language, lang, places_node, leg,
-                        include_intermediate_stops);
+                        include_intermediate_stops, api_version);
     }
   }
 
@@ -1005,6 +1017,7 @@ pugi::xml_document build_trip_response(routing const& routing_ep,
 net::reply ojp::operator()(net::route_request const& http_req, bool) const {
   auto xml = pugi::xml_document{};
   xml.load_string(http_req.body().c_str());
+  auto const api_version = 2;  // TODO Parse version
 
   auto const req =
       xml.child("OJP").child("OJPRequest").child("siri:ServiceRequest");
@@ -1096,7 +1109,8 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
         params.child("IncludeService").text().as_bool(true),
         params.child("IncludeTrackProjection").text().as_bool(true),
         params.child("IncludePlacesContext").text().as_bool(true),
-        params.child("IncludeSituationsContext").text().as_bool(true));
+        params.child("IncludeSituationsContext").text().as_bool(true),
+        api_version);
   } else if (auto const plan_req = req.child("OJPTripRequest")) {
     utl::verify(routing_ep_.has_value(), "routing not loaded");
 
@@ -1133,7 +1147,7 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
 
     response = build_trip_response(
         *routing_ep_, lang, (*routing_ep_)(url), include_track_sections,
-        include_leg_projection, include_intermediate_stops);
+        include_leg_projection, include_intermediate_stops, api_version);
   } else if (auto const stop_times_req = req.child("OJPStopEventRequest")) {
     utl::verify(stop_times_ep_.has_value(), "stop times not loaded");
 
@@ -1167,9 +1181,9 @@ net::reply ojp::operator()(net::route_request const& http_req, bool) const {
       url_params.append({"arriveBy", "true"});
     }
 
-    response =
-        build_stop_event_response(*stop_times_ep_, lang, include_prev,
-                                  include_onward, true, (*stop_times_ep_)(url));
+    response = build_stop_event_response(*stop_times_ep_, lang, include_prev,
+                                         include_onward, true,
+                                         (*stop_times_ep_)(url), api_version);
   } else {
     throw net::bad_request_exception{"unsupported OJP request"};
   }
