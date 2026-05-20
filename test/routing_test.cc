@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include <chrono>
+#include <ranges>
 #include <sstream>
 #include <string_view>
 
@@ -283,20 +284,25 @@ TEST(motis, routing_osm_only_direct_walk) {
   import(c, "test/data_osm_only");
   auto d = data{"test/data_osm_only", c};
 
-  auto const routing = utl::init_from<ep::routing>(d).value();
-  auto const res = routing(
-      "?fromPlace=49.87526849014631,8.62771903392948"
-      "&toPlace=49.87253873915287,8.629724234688751"
-      "&time=2019-05-01T01:25Z"
-      "&timetableView=false"
-      "&transitModes="
-      "&directModes=WALK"
-      "&numLegAlternatives=3");
+  for (auto const api_version :
+       std::views::iota(kMinAPIVersion, kMaxAPIVersion + 1)) {
+    auto const routing = utl::init_from<ep::routing>(d).value();
+    auto const res =
+        routing(std::format("/api/v{}/..."
+                            "?fromPlace=49.87526849014631,8.62771903392948"
+                            "&toPlace=49.87253873915287,8.629724234688751"
+                            "&time=2019-05-01T01:25Z"
+                            "&timetableView=false"
+                            "&transitModes="
+                            "&directModes=WALK"
+                            "&numLegAlternatives=3",
+                            api_version));
 
-  ASSERT_TRUE(res.itineraries_.empty());
-  ASSERT_EQ(1U, res.direct_.size());
-  ASSERT_EQ(1U, res.direct_.front().legs_.size());
-  EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
+    ASSERT_TRUE(res.itineraries_.empty());
+    ASSERT_EQ(1U, res.direct_.size());
+    ASSERT_EQ(1U, res.direct_.front().legs_.size());
+    EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
+  }
 }
 
 TEST_P(motis_endpoint, routing) {
