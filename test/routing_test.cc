@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <sstream>
+#include <string_view>
 
 #include "boost/asio/co_spawn.hpp"
 #include "boost/asio/detached.hpp"
@@ -18,6 +19,7 @@
 
 #include "motis-api/motis-api.h"
 #include "motis/config.h"
+#include "motis/constants.h"
 #include "motis/data.h"
 #include "motis/elevators/elevators.h"
 #include "motis/elevators/parse_fasta.h"
@@ -190,6 +192,8 @@ ICE,00:35:00,24:35:00,3600
 U4,01:05:00,25:01:00,3600
 )"sv;
 
+class motis_endpoint : public testing::TestWithParam<unsigned> {};
+
 void print_short(std::ostream& out, api::Itinerary const& j) {
   auto const format_time = [&](auto&& t, char const* fmt = "%F %H:%M") {
     out << date::format(fmt, *t);
@@ -295,7 +299,7 @@ TEST(motis, routing_osm_only_direct_walk) {
   EXPECT_EQ(api::ModeEnum::WALK, res.direct_.front().legs_.front().mode_);
 }
 
-TEST(motis, routing) {
+TEST_P(motis_endpoint, routing) {
   auto ec = std::error_code{};
   std::filesystem::remove_all("test/data", ec);
 
@@ -359,8 +363,12 @@ TEST(motis, routing) {
   EXPECT_EQ(1U, stats.total_entities_success_);
   EXPECT_EQ(2U, stats.alert_total_resolve_success_);
 
-  auto const routing = utl::init_from<ep::routing>(d).value();
-  EXPECT_EQ(d.rt_->rtt_.get(), routing.rt_->rtt_.get());
+  auto const routing_ep = utl::init_from<ep::routing>(d).value();
+  EXPECT_EQ(d.rt_->rtt_.get(), routing_ep.rt_->rtt_.get());
+  auto const api_version = GetParam();
+  auto const routing = [&](std::string_view query) {
+    return routing_ep(std::format("/api/v{}/...{}", api_version, query));
+  };
 
   // Route direct with GBFS.
   {
@@ -714,3 +722,11 @@ TEST(motis, routing) {
     }));
   }
 }
+
+INSTANTIATE_TEST_CASE_P(
+    ,
+    motis_endpoint,
+    testing::Range(kMinAPIVersion, kMaxAPIVersion + 1),
+    [](testing::TestParamInfo<motis_endpoint::ParamType> const& info) {
+      return std::format("APIVersion{}", info.param);
+    });

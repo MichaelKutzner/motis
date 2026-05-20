@@ -2,6 +2,10 @@
 
 namespace motis {
 
+// Supported API versions
+constexpr auto const kMinAPIVersion = 1U;
+constexpr auto const kMaxAPIVersion = 5U;
+
 // search radius for neighbors to route to [meters]
 constexpr auto const kMaxDistance = 2000;
 
