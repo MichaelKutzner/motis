@@ -286,6 +286,7 @@ TEST(motis, routing_osm_only_direct_walk) {
 
   for (auto const api_version :
        std::views::iota(kMinAPIVersion, kMaxAPIVersion + 1)) {
+    SCOPED_TRACE(std::format("API version {}", api_version));
     auto const routing = utl::init_from<ep::routing>(d).value();
     auto const res =
         routing(std::format("/api/v{}/..."
