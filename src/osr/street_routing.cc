@@ -8,6 +8,7 @@
 #include "utl/get_or_create.h"
 #include "utl/raii.h"
 
+#include "osr/lookup.h"
 #include "osr/routing/algorithms.h"
 #include "osr/routing/parameters.h"
 #include "osr/routing/route.h"
@@ -47,12 +48,11 @@ std::vector<api::StepInstruction> get_step_instructions(
           .toLevel_ = s.from_level_.to_float()});
     }
 
-    auto const way_name = s.way_ == osr::way_idx_t::invalid()
-                              ? osr::string_idx_t::invalid()
-                              : w.way_names_[s.way_];
-    auto const props = s.way_ != osr::way_idx_t::invalid()
-                           ? w.r_->way_properties_[s.way_]
-                           : osr::way_properties{};
+    auto const is_regular_way = w.is_regular_way(s.way_);
+    auto const way_name =
+        is_regular_way ? w.way_names_[s.way_] : osr::string_idx_t::invalid();
+    auto const props =
+        is_regular_way ? w.r_->way_properties_[s.way_] : osr::way_properties{};
     steps.push_back(api::StepInstruction{
         .relativeDirection_ =
             s.way_ != osr::way_idx_t::invalid()
