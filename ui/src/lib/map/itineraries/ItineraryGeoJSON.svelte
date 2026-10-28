@@ -25,13 +25,15 @@
 	} = $props();
 
 	function isIndividualTransport(m: Mode): boolean {
-		return m == 'WALK' || m == 'BIKE' || m == 'CAR';
+		return m == 'WALK' || m == 'BIKE' || m == 'CAR' || m == 'CAR_PARKING';
 	}
 
 	function getIndividualModeColor(m: Mode): string {
 		switch (m) {
 			case 'CAR':
 				return '#bf75ff';
+			case 'CAR_PARKING':
+				return '#919dfa';
 			default:
 				return '#42a5f5';
 		}
